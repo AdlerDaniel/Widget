@@ -17,6 +17,7 @@ const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 const Store = require("./store");
 const { styles, resizeBounds } = require("./widget-styles");
+const { normalizeNotes } = require("./notes");
 const { newer } = require("./version");
 const themeTools = require("./themes");
 function systemColors() {
@@ -560,11 +561,26 @@ if (!app.requestSingleInstanceLock()) {
         .filter((w) => TYPES.includes(w.type))
         .map((w) =>
           clampBounds(
-            w,
+            normalizeNotes(w),
             screen.getAllDisplays().map((d) => d.workArea),
           ),
         );
       for (const w of store.data.widgets) widgetWindow(w);
+      const pointerStates = new Map();
+      setInterval(() => {
+        const target = desktop.pointerTarget(windows, screen);
+        for (const [id, win] of windows) {
+          if (win.isDestroyed() || win.webContents.isLoadingMainFrame())
+            continue;
+          const over = id === target;
+          if (pointerStates.get(id) !== over) {
+            pointerStates.set(id, over);
+            win.webContents.send("pointer-presence", over);
+          }
+        }
+        for (const id of pointerStates.keys())
+          if (!windows.has(id)) pointerStates.delete(id);
+      }, 100).unref();
       if (!process.argv.includes("--background")) openManager();
       else checkUpdates();
       setInterval(() => {

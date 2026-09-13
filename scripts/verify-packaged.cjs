@@ -66,6 +66,8 @@ async function connect() {
     const w = createWidget(t, i);
     delete w.theme;
     delete w.widgetOpacity;
+    delete w.notes;
+    delete w.activeNoteId;
     return {
       ...w,
       background: "#453322",
@@ -152,12 +154,27 @@ async function connect() {
         `document.querySelector('[data-nav="settings"]').click();document.querySelectorAll('[data-theme]').length===13&&!!document.querySelector('input[type=range]')`,
       ),
     });
+    await run.client.eval(`(async()=>{
+      const a=await window.widgetAPI.patch('${fixtures[0].id}',{noteAction:{type:'add'}});
+      await window.widgetAPI.patch('${fixtures[0].id}',{noteAction:{type:'update',id:a.activeNoteId,title:'Новая запись',text:'Сохранить после перезапуска'}});
+      await window.widgetAPI.patch('${fixtures[0].id}',{noteAction:{type:'select',id:a.notes[0].id}});
+      await window.widgetAPI.patch('${fixtures[1].id}',{event:{date:'2026-10-01',markerStyle:'ring',markerColor:'#33aaee'}});
+    })()`);
   } finally {
     await close(run);
   }
   run = await launch();
   try {
     const s = await run.client.eval("window.widgetAPI.state()");
+    checks.push({
+      name: "multiple notes and calendar marker survive packaged restart",
+      ok:
+        s.widgets[0].notes.length === 2 &&
+        s.widgets[0].notes[1].title === "Новая запись" &&
+        s.widgets[0].notes[1].text === "Сохранить после перезапуска" &&
+        s.widgets[1].eventMarkers["2026-10-01"].color === "#33aaee" &&
+        s.widgets[1].eventMarkers["2026-10-01"].style === "ring",
+    });
     checks.push({
       name: "themes and transparency survive restart",
       ok:

@@ -126,7 +126,25 @@ module.exports = async ({
       checks,
       out,
     });
-    await require('../tests/widget-design-smoke.cjs')({manager,store,windows,desktop,checks,out,save});
+    await require("../tests/widget-design-smoke.cjs")({
+      manager,
+      store,
+      windows,
+      desktop,
+      checks,
+      out,
+      save,
+    });
+    await require("../tests/widget-editing-smoke.cjs")({
+      manager,
+      store,
+      windows,
+      desktop,
+      checks,
+      out,
+      save,
+    });
+    await require("../tests/native-pointer-smoke.cjs")({ desktop, checks });
     setUpdate({
       status: "available",
       required: true,

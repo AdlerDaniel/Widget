@@ -1,0 +1,166 @@
+const fs = require("node:fs"),
+  path = require("node:path");
+module.exports = async ({
+  manager,
+  store,
+  windows,
+  desktop,
+  checks,
+  out,
+  save,
+}) => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)),
+    original = JSON.parse(JSON.stringify(store.data));
+  const note = store.data.widgets.find((w) => w.type === "note"),
+    win = windows.get(note.id),
+    js = (s) => win.webContents.executeJavaScript(s),
+    oldTarget = desktop.pointerTarget;
+  const click = async (selector) => {
+    await js(`document.querySelector(${JSON.stringify(selector)}).click()`);
+    await wait(150);
+  };
+  try {
+    // Drive the same native-presence channel as the Windows hit test.
+    let target = note.id;
+    desktop.pointerTarget = () => target;
+    await js(`window.widgetAPI.patch('${note.id}',{radius:40})`);
+    await wait(2400);
+    checks.push({
+      name: "Lucide gear is centered and clear of maximum rounded corners",
+      ok: await js(
+        `(()=>{const b=document.querySelector('#widget-edit'),i=b.querySelector('.gear-icon'),r=b.getBoundingClientRect(),a=i.getBoundingClientRect();return getComputedStyle(b).opacity==='1'&&r.top>=12&&innerWidth-r.right>=12&&Math.abs((a.left+a.right)-(r.left+r.right))<1&&Math.abs((a.top+a.bottom)-(r.top+r.bottom))<1&&getComputedStyle(i).maskImage.includes('settings.svg');})()`,
+      ),
+    });
+    fs.writeFileSync(
+      path.join(out, "gear-max-radius.png"),
+      (await win.webContents.capturePage()).toPNG(),
+    );
+    await js(`document.querySelector('#widget-edit').focus()`);
+    target = null;
+    await wait(300);
+    checks.push({
+      name: "gear hides on native exit even if the button retained focus",
+      ok: await js(
+        `getComputedStyle(document.querySelector('#widget-edit')).opacity==='0'`,
+      ),
+    });
+    const first = store.data.widgets.find((w) => w.id === note.id).activeNoteId;
+    await click("#note-add");
+    const second = store.data.widgets.find(
+      (w) => w.id === note.id,
+    ).activeNoteId;
+    await js(
+      `document.querySelector('#note-title').value='Идеи';document.querySelector('#note-title').dispatchEvent(new Event('input'))`,
+    );
+    await wait(100);
+    await js(
+      `document.querySelector('#note').value='Сделать подборку фотографий';document.querySelector('#note').dispatchEvent(new Event('input'))`,
+    );
+    await wait(100);
+    await click("#note-save");
+    checks.push({
+      name: "new note is named edited and explicitly saved inside widget",
+      ok:
+        second !== first &&
+        (await js(
+          `document.querySelector('#note-status').textContent==='Сохранено ✓'`,
+        )),
+    });
+    await click("#notes-list-toggle");
+    fs.writeFileSync(
+      path.join(out, "notes-list.png"),
+      (await win.webContents.capturePage()).toPNG(),
+    );
+    checks.push({
+      name: "widget list contains both records",
+      ok: await js(
+        `document.querySelectorAll('[data-note-id]').length===2&&document.querySelector('.notes-list').textContent.includes('Идеи')`,
+      ),
+    });
+    await click(`[data-note-id="${first}"]`);
+    checks.push({
+      name: "switching notes restores original text without replacing it",
+      ok: await js(
+        `document.querySelector('#note').value==='Заметка сохранена ✓'`,
+      ),
+    });
+    await click("#notes-list-toggle");
+    await click(`[data-note-id="${second}"]`);
+    checks.push({
+      name: "switching back restores title and body",
+      ok: await js(
+        `document.querySelector('#note-title').value==='Идеи'&&document.querySelector('#note').value==='Сделать подборку фотографий'`,
+      ),
+    });
+    fs.writeFileSync(
+      path.join(out, "notes-editor.png"),
+      (await win.webContents.capturePage()).toPNG(),
+    );
+    const disk = JSON.parse(fs.readFileSync(store.file)).widgets.find(
+      (w) => w.id === note.id,
+    );
+    checks.push({
+      name: "multiple notes and selected record are persisted",
+      ok:
+        disk.notes.length === 2 &&
+        disk.activeNoteId === second &&
+        disk.notes.find((n) => n.id === second).text ===
+          "Сделать подборку фотографий",
+    });
+    await click("#note-delete");
+    await click("#note-delete");
+    checks.push({
+      name: "deleting a note leaves the other record intact",
+      ok:
+        store.data.widgets.find((w) => w.id === note.id).notes.length === 1 &&
+        (await js(
+          `document.querySelector('#note').value==='Заметка сохранена ✓'`,
+        )),
+    });
+    const cal = store.data.widgets.find((w) => w.type === "calendar"),
+      cw = windows.get(cal.id),
+      cj = (s) => cw.webContents.executeJavaScript(s);
+    for (const [day, style, color] of [
+      [15, "dot", "#ffa344"],
+      [16, "ring", "#4dd8b4"],
+      [17, "text", "#ff739a"],
+    ]) {
+      await cj(
+        `document.querySelectorAll('[data-date]')[${day - 1}].click();document.querySelector('#event').value='План на день';document.querySelector('#event').dispatchEvent(new Event('input'))`,
+      );
+      await wait(100);
+      await cj(
+        `document.querySelector('#event-marker-style').value='${style}';document.querySelector('#event-marker-style').dispatchEvent(new Event('change'))`,
+      );
+      await wait(100);
+      await cj(
+        `document.querySelector('#event-marker-color').value='${color}';document.querySelector('#event-marker-color').dispatchEvent(new Event('change'))`,
+      );
+      await wait(100);
+      checks.push({
+        name: "calendar " + style + " marking renders with selected color",
+        ok: await cj(
+          `(()=>{const d=document.querySelectorAll('[data-date]')[${day - 1}];return d.classList.contains('marker-${style}')&&getComputedStyle(d).getPropertyValue('--marker').trim()==='${color}';})()`,
+        ),
+      });
+    }
+    fs.writeFileSync(
+      path.join(out, "calendar-markers.png"),
+      (await cw.webContents.capturePage()).toPNG(),
+    );
+    const weather = store.data.widgets.find((w) => w.type === "weather");
+    checks.push({
+      name: "weather widget has no provider footer label",
+      ok: await windows
+        .get(weather.id)
+        .webContents.executeJavaScript(
+          `!document.body.textContent.includes('Open-Meteo')`,
+        ),
+    });
+  } finally {
+    desktop.pointerTarget = oldTarget;
+    store.data = original;
+    save();
+    await js(`noteListOpen=false;renderWidget()`);
+  }
+};

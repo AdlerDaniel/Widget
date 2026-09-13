@@ -44,6 +44,22 @@ const pos = u.func(
   "bool __stdcall SetWindowPos(void * hwnd, void * after, int x, int y, int cx, int cy, uint32 flags)",
 );
 const Point = koffi.struct("DesktopPoint", { x: "long", y: "long" });
+const windowAt = u.func("void * __stdcall WindowFromPoint(DesktopPoint point)");
+const isChild = u.func("bool __stdcall IsChild(void * parent, void * child)");
+function pointerTarget(windows, screen) {
+  const hwnd = windowAt(screen.dipToScreenPoint(screen.getCursorScreenPoint()));
+  if (!hwnd) return null;
+  for (const [id, win] of windows) {
+    if (win.isDestroyed() || !win.isVisible()) continue;
+    const h = handle(win);
+    if (
+      win.getNativeWindowHandle().readBigUInt64LE() === hwnd ||
+      isChild(h, hwnd)
+    )
+      return id;
+  }
+  return null;
+}
 const toClient = u.func(
   "bool __stdcall ScreenToClient(void * hwnd, _Inout_ DesktopPoint * point)",
 );
@@ -107,4 +123,4 @@ function inspect(win) {
     rect: r,
   };
 }
-module.exports = { attach, move, inspect };
+module.exports = { attach, move, inspect, pointerTarget };

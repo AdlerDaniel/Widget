@@ -1,5 +1,6 @@
 "use strict";
 const crypto = require("node:crypto");
+const { normalizeNotes, patchNotes } = require("./notes");
 const { validTheme } = require("./themes");
 const { validStyle, styleDefaults } = require("./widget-styles");
 const TYPES = ["weather", "clock", "note", "photo", "calendar"];
@@ -12,7 +13,7 @@ const sizes = {
 };
 function createWidget(type, offset = 0) {
   if (!TYPES.includes(type)) throw Error("Неизвестный виджет");
-  return {
+  return normalizeNotes({
     id: crypto.randomUUID(),
     type,
     x: 80 + offset * 28,
@@ -42,7 +43,7 @@ function createWidget(type, offset = 0) {
     showTitle: true,
     showBackground: true,
     events: {},
-  };
+  });
 }
 function patchWidget(widget, patch) {
   const out = { ...widget };
@@ -84,19 +85,36 @@ function patchWidget(widget, patch) {
   if (
     patch.event &&
     /^\d{4}-\d{2}-\d{2}$/.test(patch.event.date) &&
-    typeof patch.event.text === "string"
+    widget.type === "calendar"
   ) {
     out.events = { ...out.events };
-    if (patch.event.text.trim())
-      out.events[patch.event.date] = patch.event.text.slice(0, 10000);
-    else delete out.events[patch.event.date];
+    out.eventMarkers = { ...out.eventMarkers };
+    const date = patch.event.date;
+    if (typeof patch.event.text === "string") {
+      if (patch.event.text.trim())
+        out.events[date] = patch.event.text.slice(0, 10000);
+      else {
+        delete out.events[date];
+        delete out.eventMarkers[date];
+      }
+    }
+    if (["dot", "ring", "text"].includes(patch.event.markerStyle))
+      out.eventMarkers[date] = {
+        ...out.eventMarkers[date],
+        style: patch.event.markerStyle,
+      };
+    if (/^#[0-9a-f]{6}$/i.test(patch.event.markerColor || ""))
+      out.eventMarkers[date] = {
+        ...out.eventMarkers[date],
+        color: patch.event.markerColor,
+      };
   }
   if (out.type === "calendar") {
     out.width = Math.max(300, out.width);
     out.height = Math.max(400, out.height);
   }
   if (out.type === "weather") out.height = Math.max(260, out.height);
-  return out;
+  return patchNotes(out, patch);
 }
 function clampBounds(w, displays) {
   const d =

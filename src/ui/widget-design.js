@@ -3,7 +3,7 @@ let widgetHoverTimer = null,
   widgetControlsVisible = false,
   widgetGesture = null;
 function widgetDesignPanel(w) {
-  return `<section class="settings-panel"><div class="eyebrow">ФОРМА И ХАРАКТЕР</div><h2>Стиль виджета</h2><div class="widget-style-grid">${state.widgetStyles[w.type].map((s) => `<button class="widget-style-choice ${(w.style || "card") === s.id ? "chosen" : ""}" data-widget-style="${s.id}" aria-pressed="${(w.style || "card") === s.id}"><span class="style-mini style-mini-${s.id}" aria-hidden="true"><i></i><b></b></span><strong>${esc(s.name)}</strong><span>${esc(s.description)}</span></button>`).join("")}</div><label class="check"><input type="checkbox" data-prop="showTitle" ${w.showTitle !== false ? "checked" : ""}>Показывать заголовок виджета</label><label class="check"><input type="checkbox" data-prop="showBackground" ${w.showBackground !== false ? "checked" : ""}>Показывать фон и рамку</label><p class="hint">Стили можно сочетать с любой темой. Наведите курсор на виджет на 2 секунды — появится меню «⋯». Размер меняется за угол справа внизу. Виджет без заголовка можно перемещать за свободное место; у заметок и календаря — за верхний край.</p></section>`;
+  return `<section class="settings-panel"><div class="eyebrow">ФОРМА И ХАРАКТЕР</div><h2>Стиль виджета</h2><div class="widget-style-grid">${state.widgetStyles[w.type].map((s) => `<button class="widget-style-choice ${(w.style || "card") === s.id ? "chosen" : ""}" data-widget-style="${s.id}" aria-pressed="${(w.style || "card") === s.id}"><span class="style-mini style-mini-${s.id}" aria-hidden="true"><i></i><b></b></span><strong>${esc(s.name)}</strong><span>${esc(s.description)}</span></button>`).join("")}</div><label class="check"><input type="checkbox" data-prop="showTitle" ${w.showTitle !== false ? "checked" : ""}>Показывать заголовок виджета</label><label class="check"><input type="checkbox" data-prop="showBackground" ${w.showBackground !== false ? "checked" : ""}>Показывать фон и рамку</label><p class="hint">Стили можно сочетать с любой темой. Наведите курсор на виджет на 2 секунды — появится шестерёнка настроек. Размер меняется за угол справа внизу. Виджет без заголовка можно перемещать за свободное место; у заметок и календаря — за верхний край.</p></section>`;
 }
 function bindWidgetDesign() {
   root.querySelectorAll("[data-widget-style]").forEach(
@@ -15,9 +15,6 @@ function bindWidgetDesign() {
           renderManager();
         })),
   );
-}
-function controlClass() {
-  return widgetControlsVisible ? " controls-visible" : "";
 }
 function revealControls() {
   root.classList.toggle("controls-visible", widgetControlsVisible);
@@ -38,11 +35,9 @@ function leaveHover() {
   widgetHovered = false;
   clearTimeout(widgetHoverTimer);
   widgetHoverTimer = null;
-  if (!widgetGesture) {
-    widgetControlsVisible = false;
-    root.classList.remove("widget-hovered");
-    revealControls();
-  }
+  widgetControlsVisible = false;
+  root.classList.remove("widget-hovered");
+  revealControls();
 }
 async function endWidgetGesture() {
   if (!widgetGesture) return;
@@ -57,9 +52,8 @@ async function endWidgetGesture() {
   renderWidget();
 }
 function mountWidgetInteractions(w) {
-  root.onpointerenter = beginHover;
-  root.onpointerleave = leaveHover;
   root.onpointerdown = (e) => {
+    root.classList.remove("keyboard-navigation");
     if (e.button !== 0 || w.locked || state.update.required) return;
     const resizing = !!e.target.closest("#resize-grip");
     if (!resizing && e.target.closest("button,textarea,input,select,a")) return;
@@ -76,7 +70,6 @@ function mountWidgetInteractions(w) {
   };
   root.onpointercancel = root.onlostpointercapture = () => endWidgetGesture();
   window.onblur = () => {
-    leaveHover();
     endWidgetGesture();
   };
   const grip = document.querySelector("#resize-grip");
@@ -96,8 +89,7 @@ function mountWidgetInteractions(w) {
     };
 }
 function weatherArt(code) {
-  const sun = code === 0,
-    cloud = code > 0,
+  const cloud = code > 0,
     wet = (code >= 51 && code <= 67) || (code >= 80 && code <= 82),
     snow = (code >= 71 && code <= 77) || (code >= 85 && code <= 86),
     storm = code >= 95;

@@ -21,4 +21,5 @@ contextBridge.exposeInMainWorld("widgetAPI", {
   quit: () => ipcRenderer.invoke("quit"),
   onState: (cb) => ipcRenderer.on("state", (_e, s) => cb(s)),
   onEdit: (cb) => ipcRenderer.on("edit", (_e, id) => cb(id)),
+  onPointer: (cb) => ipcRenderer.on("pointer-presence", (_e, over) => cb(over)),
 });
