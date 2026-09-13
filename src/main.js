@@ -9,11 +9,20 @@ const {
   dialog,
   screen,
   net,
+  systemPreferences,
+  nativeTheme,
 } = require("electron");
 const fs = require("node:fs");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 const Store = require("./store");
+const themeTools = require("./themes");
+function systemColors() {
+  return {
+    accent: "#" + systemPreferences.getAccentColor().slice(0, 6),
+    dark: nativeTheme.shouldUseDarkColors,
+  };
+}
 const { TYPES, createWidget, patchWidget, clampBounds } = require("./model");
 app.setName("Widget");
 const smoke = process.argv.includes("--smoke");
@@ -46,8 +55,20 @@ function broadcast() {
     if (!w.isDestroyed()) w.webContents.send("state", state());
 }
 function state() {
+  const appearance = themeTools.appearance(store.data.appearance),
+    system = systemColors();
   return {
     ...store.data,
+    appearance,
+    system,
+    palette: themeTools.resolveTheme(appearance.theme, system),
+    themes: [
+      ...Object.values(themeTools.themes),
+      themeTools.resolveTheme("system", system),
+    ],
+    widgets: store.data.widgets.map((w) =>
+      themeTools.resolveWidget(w, appearance, system),
+    ),
     version: app.getVersion(),
     changes: require("../changes.json"),
     update,
@@ -95,6 +116,9 @@ function openManager() {
     icon: path.join(__dirname, "../assets/icon.png"),
   });
   manager.loadFile(path.join(__dirname, "ui/index.html"));
+  manager.setOpacity(
+    themeTools.appearance(store.data.appearance).opacity / 100,
+  );
   manager.once("ready-to-show", () => manager.show());
   manager.on("close", (e) => {
     if (!quitting) {
@@ -230,6 +254,25 @@ async function json(url) {
 }
 function registerIPC() {
   ipcMain.handle("state", () => state());
+  ipcMain.handle("appearance", (e, patch) => {
+    requireManager(e);
+    requireUnlocked();
+    store.data.appearance = themeTools.appearance({
+      ...themeTools.appearance(store.data.appearance),
+      ...patch,
+    });
+    manager.setOpacity(store.data.appearance.opacity / 100);
+    save();
+  });
+  ipcMain.handle("theme-all", (e) => {
+    requireManager(e);
+    requireUnlocked();
+    store.data.widgets = store.data.widgets.map((w) => ({
+      ...w,
+      theme: "app",
+    }));
+    save();
+  });
   ipcMain.handle("add", (e, type) => {
     requireManager(e);
     requireUnlocked();
@@ -248,6 +291,19 @@ function registerIPC() {
     requireUnlocked();
     const old = selected(e, id),
       w = patchWidget(old, patch);
+    if (
+      ["background", "foreground", "accent"].some((key) =>
+        /^#[a-f0-9]{6}$/i.test(patch[key] || ""),
+      )
+    ) {
+      const current = themeTools.resolveWidget(
+        old,
+        themeTools.appearance(store.data.appearance),
+        systemColors(),
+      );
+      for (const key of ["background", "foreground", "accent"])
+        if (!/^#[a-f0-9]{6}$/i.test(patch[key] || "")) w[key] = current[key];
+    }
     store.data.widgets[store.data.widgets.indexOf(old)] = w;
     save();
     if (w.width !== old.width || w.height !== old.height)
@@ -401,6 +457,9 @@ if (!app.requestSingleInstanceLock()) {
     .whenReady()
     .then(async () => {
       store = new Store(app.getPath("userData"));
+      store.data.appearance = themeTools.appearance(store.data.appearance);
+      systemPreferences.on("accent-color-changed", () => broadcast());
+      nativeTheme.on("updated", () => broadcast());
       desktop = require("./desktop");
       updater = configureUpdates();
       if (store.data.pendingUpdate)

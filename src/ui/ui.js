@@ -92,7 +92,7 @@ function mine() {
 }
 function settings() {
   const u = state.update;
-  return `<div class="eyebrow">ПАРАМЕТРЫ</div><h1>Удобно каждый день</h1><div class="settings-panel" style="margin-top:25px"><h2>Запуск вместе с Windows</h2><p>Ваши виджеты появятся автоматически после входа в систему. Окно каталога открываться не будет.</p><label class="check"><input id="autostart" type="checkbox" ${state.autostart ? "checked" : ""}>Включать виджеты при входе в Windows</label></div><div class="settings-panel"><div class="row spread"><h2>Версия ${esc(state.version)}</h2><span class="pill">${u.status === "checking" ? "Проверяем…" : u.status === "current" ? "Установлена актуальная версия" : "Обновления"}</span></div><p>${(state.changes || []).map(esc).join("<br>")}</p>${u.status === "error" ? `<p class="status-error">${esc(u.message)}</p>` : ""}<button class="secondary" id="check-update">Проверить обновления</button></div><div class="settings-panel"><h2>Как управлять виджетами</h2><p>Перетаскивайте виджет за его заголовок. Кнопка «⋯» открывает настройки. Записи сохраняются автоматически. Пункт «Вернуть виджеты на экран» в трее поможет после смены монитора.</p><p class="small">Погода: Open-Meteo · CC BY 4.0. Фотографии и заметки хранятся на вашем компьютере.</p></div>`;
+  return `<div class="eyebrow">ПАРАМЕТРЫ</div><h1>Удобно каждый день</h1>${appAppearancePanel()}<div class="settings-panel" style="margin-top:25px"><h2>Запуск вместе с Windows</h2><p>Ваши виджеты появятся автоматически после входа в систему. Окно каталога открываться не будет.</p><label class="check"><input id="autostart" type="checkbox" ${state.autostart ? "checked" : ""}>Включать виджеты при входе в Windows</label></div><div class="settings-panel"><div class="row spread"><h2>Версия ${esc(state.version)}</h2><span class="pill">${u.status === "checking" ? "Проверяем…" : u.status === "current" ? "Установлена актуальная версия" : "Обновления"}</span></div><p>${(state.changes || []).map(esc).join("<br>")}</p>${u.status === "error" ? `<p class="status-error">${esc(u.message)}</p>` : ""}<button class="secondary" id="check-update">Проверить обновления</button></div><div class="settings-panel"><h2>Как управлять виджетами</h2><p>Перетаскивайте виджет за его заголовок. Кнопка «⋯» открывает настройки. Записи сохраняются автоматически. Пункт «Вернуть виджеты на экран» в трее поможет после смены монитора.</p><p class="small">Погода: Open-Meteo · CC BY 4.0. Фотографии и заметки хранятся на вашем компьютере.</p></div>`;
 }
 function field(label, input, wide = false) {
   return `<label class="field${wide ? " wide" : ""}">${label}${input}</label>`;
@@ -105,7 +105,7 @@ function editPanel() {
   }
   const input = (key, type = "text", extra = "") =>
     `<input data-prop="${key}" type="${type}" value="${esc(w[key])}" ${extra}>`;
-  return `<button class="back" id="back">← Мои виджеты</button><div class="intro"><div><div class="eyebrow">ИНДИВИДУАЛЬНЫЙ СТИЛЬ</div><h1>${names[w.type]}</h1><p>Изменения сразу появятся на рабочем столе.</p></div></div><div class="settings-panel"><div class="editor-preview" id="editor-preview" style="background:${w.background};color:${w.foreground};border-radius:${w.radius}px"><strong>${esc(w.title || names[w.type])}</strong><span style="color:${w.accent}">Aa · 123</span></div><div class="form-grid">${field("Название", input("title", "text", `placeholder="${names[w.type]}"`), true)}${field("Цвет фона", input("background", "color"))}${field("Цвет текста", input("foreground", "color"))}${field("Акцент", input("accent", "color"))}${field("Непрозрачность, %", input("opacity", "number", 'min="25" max="100"'))}${field("Ширина, px", input("width", "number", 'min="240" max="900"'))}${field("Высота, px", input("height", "number", 'min="180" max="1000"'))}${field("Размер текста, px", input("fontSize", "number", 'min="12" max="30"'))}${field("Скругление, px", input("radius", "number", 'min="0" max="40"'))}</div><label class="check"><input data-prop="locked" type="checkbox" ${w.locked ? "checked" : ""}>Закрепить положение</label></div><div class="settings-panel">${w.type === "weather" ? `<h2>Ваш город</h2><p class="small">Сейчас: <span id="current-city">${esc(w.city)}</span></p><div class="row"><input id="city-search" placeholder="Название города" style="flex:1"><button class="secondary" id="search-city">Найти</button></div><div class="city-results" id="city-results"></div><label class="field" style="margin-top:18px">Единицы температуры<select data-prop="units"><option value="celsius" ${w.units === "celsius" ? "selected" : ""}>Градусы Цельсия · °C</option><option value="fahrenheit" ${w.units === "fahrenheit" ? "selected" : ""}>Градусы Фаренгейта · °F</option></select></label>` : w.type === "clock" ? `<h2>Отображение времени</h2><label class="check"><input data-prop="seconds" type="checkbox" ${w.seconds ? "checked" : ""}>Показывать секунды</label><label class="check"><input data-prop="hour12" type="checkbox" ${w.hour12 ? "checked" : ""}>12-часовой формат</label>` : w.type === "photo" ? `<h2>Любимый кадр</h2><p class="small">PNG, JPG или WebP, до 30 МБ. Копия фото сохраняется в приложении.</p><button class="primary" id="choose-photo">Выбрать фотографию</button><label class="field" style="margin-top:18px">Размещение<select data-prop="fit"><option value="cover" ${w.fit === "cover" ? "selected" : ""}>Заполнить виджет</option><option value="contain" ${w.fit === "contain" ? "selected" : ""}>Показать фото целиком</option></select></label>` : w.type === "note" ? `<h2>Текст заметки</h2><textarea data-prop="text" rows="7" style="width:100%" placeholder="Запишите важное…">${esc(w.text)}</textarea><p class="hint">Также можно писать прямо в виджете.</p>` : `<h2>Планы на каждый день</h2><p>Выберите день в календаре на рабочем столе и напишите заметку под ним. Даты с записями отмечены точкой.</p>`}</div><button class="danger" id="remove-widget">Удалить виджет</button><span class="hint" style="margin-left:15px">Будут удалены и его записи</span>`;
+  return `<button class="back" id="back">← Мои виджеты</button><div class="intro"><div><div class="eyebrow">ИНДИВИДУАЛЬНЫЙ СТИЛЬ</div><h1>${names[w.type]}</h1><p>Изменения сразу появятся на рабочем столе.</p></div></div>${widgetAppearancePanel(w)}<div class="settings-panel"><div class="editor-preview" id="editor-preview" style="background:${w.background};color:${w.foreground};border-radius:${w.radius}px"><strong>${esc(w.title || names[w.type])}</strong><span style="color:${w.accent}">Aa · 123</span></div><div class="form-grid">${field("Название", input("title", "text", `placeholder="${names[w.type]}"`), true)}${field("Цвет фона", input("background", "color"))}${field("Цвет текста", input("foreground", "color"))}${field("Акцент", input("accent", "color"))}${widgetSliders(w)}</div><label class="check"><input data-prop="locked" type="checkbox" ${w.locked ? "checked" : ""}>Закрепить положение</label></div><div class="settings-panel">${w.type === "weather" ? `<h2>Ваш город</h2><p class="small">Сейчас: <span id="current-city">${esc(w.city)}</span></p><div class="row"><input id="city-search" placeholder="Название города" style="flex:1"><button class="secondary" id="search-city">Найти</button></div><div class="city-results" id="city-results"></div><label class="field" style="margin-top:18px">Единицы температуры<select data-prop="units"><option value="celsius" ${w.units === "celsius" ? "selected" : ""}>Градусы Цельсия · °C</option><option value="fahrenheit" ${w.units === "fahrenheit" ? "selected" : ""}>Градусы Фаренгейта · °F</option></select></label>` : w.type === "clock" ? `<h2>Отображение времени</h2><label class="check"><input data-prop="seconds" type="checkbox" ${w.seconds ? "checked" : ""}>Показывать секунды</label><label class="check"><input data-prop="hour12" type="checkbox" ${w.hour12 ? "checked" : ""}>12-часовой формат</label>` : w.type === "photo" ? `<h2>Любимый кадр</h2><p class="small">PNG, JPG или WebP, до 30 МБ. Копия фото сохраняется в приложении.</p><button class="primary" id="choose-photo">Выбрать фотографию</button><label class="field" style="margin-top:18px">Размещение<select data-prop="fit"><option value="cover" ${w.fit === "cover" ? "selected" : ""}>Заполнить виджет</option><option value="contain" ${w.fit === "contain" ? "selected" : ""}>Показать фото целиком</option></select></label>` : w.type === "note" ? `<h2>Текст заметки</h2><textarea data-prop="text" rows="7" style="width:100%" placeholder="Запишите важное…">${esc(w.text)}</textarea><p class="hint">Также можно писать прямо в виджете.</p>` : `<h2>Планы на каждый день</h2><p>Выберите день в календаре на рабочем столе и напишите заметку под ним. Даты с записями отмечены точкой.</p>`}</div><button class="danger" id="remove-widget">Удалить виджет</button><span class="hint" style="margin-left:15px">Будут удалены и его записи</span>`;
 }
 function updateOverlay() {
   const u = state.update;
@@ -113,6 +113,7 @@ function updateOverlay() {
   return `<div class="update-overlay"><section class="update-box"><div class="eyebrow">ДОСТУПНА НОВАЯ ВЕРСИЯ</div><h2>Widget ${esc(u.version)}</h2><p class="muted">Чтобы продолжить работу, установите обновление.</p><pre>${esc(u.notes)}</pre>${u.status === "downloading" ? `<progress max="100" value="${u.percent || 0}"></progress><p>Загрузка: ${u.percent || 0}%</p>` : ""}${u.status === "error" ? `<p class="status-error">${esc(u.message)}</p>` : ""}<div class="row">${u.status === "downloaded" ? '<button class="primary" id="install-update">Установить и перезапустить</button>' : `<button class="primary" id="download-update" ${["checking", "downloading"].includes(u.status) ? "disabled" : ""}>${u.status === "downloading" ? "Загружаем…" : "Обновить сейчас"}</button>`}<button class="secondary" id="quit">Выйти</button></div></section></div>`;
 }
 function renderManager() {
+  applyAppPalette();
   root.innerHTML = `<div class="shell"><aside class="sidebar"><div class="brand"><span class="brand-icon"><i></i><i></i><i></i><i></i></span>Widget</div><nav class="nav">${[
     ["catalog", "Коллекция"],
     ["mine", "Мои виджеты"],
@@ -126,6 +127,7 @@ function renderManager() {
       "",
     )}</nav><div class="sidebar-bottom"><p class="small muted"><span class="live-dot"></span>Ваш рабочий стол</p><span class="small muted">Widget · ${esc(state.version)}</span></div></aside><main class="main">${editing ? editPanel() : view === "mine" ? mine() : view === "settings" ? settings() : catalog()}</main></div>${updateOverlay()}`;
   bindManager();
+  bindAppearance();
 }
 function bindManager() {
   root.querySelectorAll("[data-nav]").forEach(
@@ -301,14 +303,14 @@ function renderWidget() {
     selectionEnd = active?.selectionEnd,
     scroll = active?.scrollTop,
     typing = active?.tagName === "TEXTAREA" ? active.value : null;
-  root.innerHTML = `<article class="widget" style="--bg:${w.background}${Math.round(
+  root.innerHTML = `<article class="widget" style="opacity:${(w.widgetOpacity ?? 100) / 100};--bg:${w.background}${Math.round(
     w.opacity * 2.55,
   )
     .toString(16)
     .padStart(
       2,
       "0",
-    )};--fg:${w.foreground};--accent:${w.accent};--radius:${w.radius}px;--font-size:${w.fontSize}px"><header class="widget-header" id="drag"><span class="widget-title">${esc(w.title || (w.type === "weather" ? w.city : names[w.type]))}${w.locked ? " · ⌁" : ""}</span><button id="widget-edit" aria-label="Настройки виджета">⋯</button></header>${state.update.required ? '<div class="widget-update">Доступна новая версия<br><button id="widget-open-update">Обновить Widget</button></div>' : widgetContent(w)}</article>`;
+    )};--fg:${w.foreground};--accent:${w.accent};--on-accent:${w.accentForeground};--radius:${w.radius}px;--font-size:${w.fontSize}px"><header class="widget-header" id="drag"><span class="widget-title">${esc(w.title || (w.type === "weather" ? w.city : names[w.type]))}${w.locked ? " · ⌁" : ""}</span><button id="widget-edit" aria-label="Настройки виджета">⋯</button></header>${state.update.required ? '<div class="widget-update">Доступна новая версия<br><button id="widget-open-update">Обновить Widget</button></div>' : widgetContent(w)}</article>`;
   bind("#widget-edit", () => api.edit(id));
   bind("#widget-open-update", () => api.edit(id));
   bind("#widget-photo", () => api.photo(id));
@@ -380,10 +382,12 @@ function tick() {
 api.onState((s) => {
   const previous = state;
   state = s;
+  applyAppPalette();
+  const sliding = document.activeElement?.matches("[data-range]");
   if (id) {
     renderWidget();
   } else if (
-    !editing ||
+    (!editing && !sliding) ||
     previous?.update.status !== s.update.status ||
     s.update.required
   ) {
@@ -397,6 +401,18 @@ api.onState((s) => {
       preview.style.borderRadius = w.radius + "px";
       preview.firstElementChild.textContent = w.title || names[w.type];
       preview.lastElementChild.style.color = w.accent;
+      root.querySelectorAll("[data-prop]").forEach((el) => {
+        if (
+          ["background", "foreground", "accent"].includes(el.dataset.prop) &&
+          el !== document.activeElement
+        )
+          el.value = w[el.dataset.prop];
+      });
+      root.querySelectorAll('[data-theme-scope="widget"]').forEach((el) => {
+        const chosen = el.dataset.theme === w.theme;
+        el.classList.toggle("chosen", chosen);
+        el.setAttribute("aria-pressed", String(chosen));
+      });
     }
   }
 });

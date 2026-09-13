@@ -118,6 +118,13 @@ module.exports = async ({
     await win.webContents.executeJavaScript(
       `window.widgetAPI.patch('${note.id}',{background:'#202839',width:300})`,
     );
+    await require("../tests/appearance-smoke.cjs")({
+      manager,
+      store,
+      windows,
+      checks,
+      out,
+    });
     setUpdate({
       status: "available",
       required: true,

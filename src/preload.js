@@ -1,6 +1,8 @@
 const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("widgetAPI", {
   state: () => ipcRenderer.invoke("state"),
+  appearance: (p) => ipcRenderer.invoke("appearance", p),
+  themeAll: () => ipcRenderer.invoke("theme-all"),
   add: (t) => ipcRenderer.invoke("add", t),
   patch: (id, p) => ipcRenderer.invoke("patch", id, p),
   remove: (id) => ipcRenderer.invoke("remove", id),

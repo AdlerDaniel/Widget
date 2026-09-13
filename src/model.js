@@ -1,5 +1,6 @@
 "use strict";
 const crypto = require("node:crypto");
+const { validTheme } = require("./themes");
 const TYPES = ["weather", "clock", "note", "photo", "calendar"];
 const sizes = {
   weather: [300, 280],
@@ -20,7 +21,9 @@ function createWidget(type, offset = 0) {
     background: "#202839",
     foreground: "#f4f6fc",
     accent: "#b9a3ff",
+    theme: "app",
     opacity: 96,
+    widgetOpacity: 100,
     fontSize: 16,
     radius: 24,
     title: "",
@@ -39,15 +42,20 @@ function createWidget(type, offset = 0) {
 }
 function patchWidget(widget, patch) {
   const out = { ...widget };
+  if (validTheme(patch.theme, true)) out.theme = patch.theme;
   for (const key of ["title", "text", "city"])
     if (typeof patch[key] === "string")
       out[key] = patch[key].slice(0, key === "text" ? 100000 : 150);
   for (const key of ["background", "foreground", "accent"])
-    if (/^#[0-9a-f]{6}$/i.test(patch[key] || "")) out[key] = patch[key];
+    if (/^#[0-9a-f]{6}$/i.test(patch[key] || "")) {
+      out[key] = patch[key];
+      out.theme = "custom";
+    }
   for (const [key, min, max] of [
     ["width", 240, 900],
     ["height", 180, 1000],
     ["opacity", 25, 100],
+    ["widgetOpacity", 25, 100],
     ["fontSize", 12, 30],
     ["radius", 0, 40],
     ["latitude", -90, 90],
