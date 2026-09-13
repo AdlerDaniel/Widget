@@ -1,0 +1,70 @@
+{
+  "name": "desktop-widget",
+  "version": "1.0.0",
+  "description": "Персональные виджеты рабочего стола Windows",
+  "productName": "Widget",
+  "private": true,
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test tests/*.test.js",
+    "smoke": "electron . --smoke",
+    "dist": "node scripts/build-config.js && electron-builder --config release-config.json --win nsis --x64 --publish never",
+    "release": "node scripts/release.js"
+  },
+  "keywords": [],
+  "author": "AdlerDaniel",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "electron-updater": "^6.8.9",
+    "koffi": "^3.2.1"
+  },
+  "build": {
+    "appId": "com.adler.widget",
+    "productName": "Widget",
+    "artifactName": "Widget-Setup-${version}.${ext}",
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json",
+      "changes.json",
+      "!src/smoke.js"
+    ],
+    "asarUnpack": [
+      "node_modules/koffi/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico",
+      "signExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Widget",
+      "deleteAppDataOnUninstall": false,
+      "installerLanguages": [
+        "ru_RU"
+      ],
+      "language": "1049",
+      "include": "assets/installer.nsh"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "AdlerDaniel",
+        "repo": "Widget",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "devDependencies": {
+    "electron": "^44.3.0",
+    "electron-builder": "^26.15.3",
+    "prettier": "^3.9.6"
+  }
+}

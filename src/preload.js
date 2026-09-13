@@ -1,0 +1,20 @@
+const { contextBridge, ipcRenderer } = require("electron");
+contextBridge.exposeInMainWorld("widgetAPI", {
+  state: () => ipcRenderer.invoke("state"),
+  add: (t) => ipcRenderer.invoke("add", t),
+  patch: (id, p) => ipcRenderer.invoke("patch", id, p),
+  remove: (id) => ipcRenderer.invoke("remove", id),
+  edit: (id) => ipcRenderer.invoke("edit", id),
+  photo: (id) => ipcRenderer.invoke("photo", id),
+  autostart: (v) => ipcRenderer.invoke("autostart", v),
+  cities: (n) => ipcRenderer.invoke("cities", n),
+  weather: (id) => ipcRenderer.invoke("weather", id),
+  dragStart: (id) => ipcRenderer.invoke("drag-start", id),
+  dragEnd: () => ipcRenderer.invoke("drag-end"),
+  checkUpdates: () => ipcRenderer.invoke("check-updates"),
+  downloadUpdate: () => ipcRenderer.invoke("download-update"),
+  installUpdate: () => ipcRenderer.invoke("install-update"),
+  quit: () => ipcRenderer.invoke("quit"),
+  onState: (cb) => ipcRenderer.on("state", (_e, s) => cb(s)),
+  onEdit: (cb) => ipcRenderer.on("edit", (_e, id) => cb(id)),
+});

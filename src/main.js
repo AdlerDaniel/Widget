@@ -1,0 +1,512 @@
+"use strict";
+const {
+  app,
+  BrowserWindow,
+  ipcMain,
+  Tray,
+  Menu,
+  nativeImage,
+  dialog,
+  screen,
+  net,
+} = require("electron");
+const fs = require("node:fs");
+const path = require("node:path");
+const { pathToFileURL } = require("node:url");
+const Store = require("./store");
+const { TYPES, createWidget, patchWidget, clampBounds } = require("./model");
+app.setName("Widget");
+const smoke = process.argv.includes("--smoke");
+const qaProfile = process.env.WIDGET_TEST_PROFILE;
+if (qaProfile) app.setPath("userData", path.resolve(qaProfile));
+if (smoke)
+  app.setPath("userData", path.join(__dirname, "../test-output/profile"));
+let store,
+  manager,
+  tray,
+  desktop,
+  quitting = false,
+  drag = null,
+  update = { status: "idle" },
+  checking = false;
+const windows = new Map();
+const failures = [];
+function log(e) {
+  const message = String(e?.stack || e);
+  failures.push(message);
+  try {
+    fs.appendFileSync(
+      path.join(app.getPath("userData"), "app.log"),
+      new Date().toISOString() + " " + message + "\n",
+    );
+  } catch {}
+}
+function broadcast() {
+  for (const w of BrowserWindow.getAllWindows())
+    if (!w.isDestroyed()) w.webContents.send("state", state());
+}
+function state() {
+  return {
+    ...store.data,
+    version: app.getVersion(),
+    changes: require("../changes.json"),
+    update,
+    recovered: store.recovered,
+  };
+}
+function save() {
+  store.save();
+  broadcast();
+}
+function safeWindow(options) {
+  const w = new BrowserWindow({
+    ...options,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  w.setMenuBarVisibility(false);
+  w.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  w.webContents.on("will-navigate", (e) => e.preventDefault());
+  w.webContents.on("render-process-gone", (_, details) => log(details.reason));
+  w.webContents.on("console-message", (_e, level, message) => {
+    if (level === 3) log(message);
+  });
+  return w;
+}
+function openManager() {
+  if (manager && !manager.isDestroyed()) {
+    manager.show();
+    manager.focus();
+    checkUpdates();
+    return;
+  }
+  manager = safeWindow({
+    width: 1140,
+    height: 820,
+    minWidth: 850,
+    minHeight: 650,
+    backgroundColor: "#10131b",
+    title: "Widget",
+    show: false,
+    icon: path.join(__dirname, "../assets/icon.png"),
+  });
+  manager.loadFile(path.join(__dirname, "ui/index.html"));
+  manager.once("ready-to-show", () => manager.show());
+  manager.on("close", (e) => {
+    if (!quitting) {
+      e.preventDefault();
+      manager.hide();
+    }
+  });
+  checkUpdates();
+}
+function bounds(w) {
+  return { x: w.x, y: w.y, width: w.width, height: w.height };
+}
+function place(w, win) {
+  try {
+    if (desktop.attach(win)) {
+      desktop.move(win, bounds(w), screen);
+      return;
+    }
+  } catch (e) {
+    log(e);
+  }
+  win.setBounds(bounds(w));
+}
+function widgetWindow(w) {
+  const win = safeWindow({
+    ...bounds(w),
+    frame: false,
+    transparent: true,
+    hasShadow: false,
+    resizable: false,
+    skipTaskbar: true,
+    show: false,
+    title: "Widget — " + w.type,
+  });
+  windows.set(w.id, win);
+  win.loadFile(path.join(__dirname, "ui/index.html"), {
+    query: { widget: w.id },
+  });
+  win.once("ready-to-show", () => {
+    win.showInactive();
+    place(w, win);
+  });
+  win.on("closed", () => windows.delete(w.id));
+  return win;
+}
+function selected(event, id) {
+  const widget = store.data.widgets.find((w) => w.id === id);
+  if (!widget) throw Error("Виджет не найден");
+  const sender = BrowserWindow.fromWebContents(event.sender);
+  if (sender !== manager && sender !== windows.get(id))
+    throw Error("Нет доступа");
+  return widget;
+}
+function requireManager(e) {
+  if (BrowserWindow.fromWebContents(e.sender) !== manager)
+    throw Error("Нет доступа");
+}
+function requireUnlocked() {
+  if (update.required) throw Error("Установите обязательное обновление");
+}
+function configureUpdates() {
+  const { autoUpdater } = require("electron-updater");
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.allowDowngrade = false;
+  autoUpdater.on("update-available", (info) => {
+    const notes =
+      (Array.isArray(info.releaseNotes)
+        ? info.releaseNotes.map((n) => n.note).join("\n")
+        : info.releaseNotes) || "Улучшения и исправления.";
+    update = {
+      status: "available",
+      required: true,
+      version: info.version,
+      notes: String(notes).replace(/<[^>]*>/g, ""),
+    };
+    store.data.pendingUpdate = { version: update.version, notes: update.notes };
+    save();
+  });
+  autoUpdater.on("update-not-available", () => {
+    update = { status: "current" };
+    delete store.data.pendingUpdate;
+    save();
+  });
+  autoUpdater.on("download-progress", (p) => {
+    update = {
+      ...update,
+      status: "downloading",
+      percent: Math.round(p.percent),
+    };
+    broadcast();
+  });
+  autoUpdater.on("update-downloaded", () => {
+    update = { ...update, status: "downloaded" };
+    broadcast();
+  });
+  autoUpdater.on("error", (e) => {
+    log(e);
+    update = {
+      ...update,
+      status: "error",
+      message:
+        "Не удалось связаться с сервером обновлений. Проверьте интернет и повторите.",
+    };
+    broadcast();
+  });
+  return autoUpdater;
+}
+let updater;
+async function checkUpdates() {
+  if (!app.isPackaged || smoke) {
+    update = { status: "current" };
+    broadcast();
+    return;
+  }
+  if (checking || ["downloading", "downloaded"].includes(update.status)) return;
+  checking = true;
+  update = { ...update, status: "checking" };
+  broadcast();
+  try {
+    await updater.checkForUpdates();
+  } catch (e) {
+    log(e);
+  } finally {
+    checking = false;
+  }
+}
+const weatherCache = new Map();
+async function json(url) {
+  const r = await net.fetch(url, { signal: AbortSignal.timeout(15000) });
+  if (!r.ok) throw Error("Сервис временно недоступен");
+  return r.json();
+}
+function registerIPC() {
+  ipcMain.handle("state", () => state());
+  ipcMain.handle("add", (e, type) => {
+    requireManager(e);
+    requireUnlocked();
+    if (store.data.widgets.length >= 30)
+      throw Error("Можно добавить не более 30 виджетов");
+    const w = clampBounds(
+      createWidget(type, store.data.widgets.length % 10),
+      screen.getAllDisplays().map((d) => d.workArea),
+    );
+    store.data.widgets.push(w);
+    save();
+    widgetWindow(w);
+    return w.id;
+  });
+  ipcMain.handle("patch", (e, id, patch) => {
+    requireUnlocked();
+    const old = selected(e, id),
+      w = patchWidget(old, patch);
+    store.data.widgets[store.data.widgets.indexOf(old)] = w;
+    save();
+    if (w.width !== old.width || w.height !== old.height)
+      place(w, windows.get(id));
+    return w;
+  });
+  ipcMain.handle("remove", (e, id) => {
+    requireManager(e);
+    requireUnlocked();
+    selected(e, id);
+    store.data.widgets = store.data.widgets.filter((w) => w.id !== id);
+    windows.get(id)?.destroy();
+    save();
+  });
+  ipcMain.handle("edit", (e, id) => {
+    selected(e, id);
+    openManager();
+    if (manager.webContents.isLoadingMainFrame())
+      manager.webContents.once("did-finish-load", () =>
+        manager.webContents.send("edit", id),
+      );
+    else manager.webContents.send("edit", id);
+  });
+  ipcMain.handle("photo", async (e, id) => {
+    requireUnlocked();
+    selected(e, id);
+    if (!manager || manager.isDestroyed()) openManager();
+    const result = await dialog.showOpenDialog(manager, {
+      title: "Выберите фотографию",
+      properties: ["openFile"],
+      filters: [
+        { name: "Изображения", extensions: ["jpg", "jpeg", "png", "webp"] },
+      ],
+    });
+    if (result.canceled) return;
+    requireUnlocked();
+    const w = selected(e, id);
+    const source = result.filePaths[0];
+    if (fs.statSync(source).size > 30 * 1024 * 1024)
+      throw Error("Выберите фото размером до 30 МБ");
+    const im = nativeImage.createFromPath(source);
+    if (im.isEmpty()) throw Error("Не удалось открыть фото");
+    const dir = path.join(app.getPath("userData"), "photos");
+    fs.mkdirSync(dir, { recursive: true });
+    const dest = path.join(dir, id + ".png");
+    const size = im.getSize();
+    fs.writeFileSync(
+      dest,
+      (Math.max(size.width, size.height) > 2400
+        ? im.resize(
+            size.width > size.height ? { width: 2400 } : { height: 2400 },
+          )
+        : im
+      ).toPNG(),
+    );
+    w.photo = pathToFileURL(dest).href + "?v=" + Date.now();
+    save();
+  });
+  ipcMain.handle("autostart", (e, value) => {
+    requireManager(e);
+    store.data.autostart = Boolean(value);
+    if (app.isPackaged && !smoke && !qaProfile)
+      app.setLoginItemSettings({
+        name: "Widget",
+        openAtLogin: store.data.autostart,
+        path: process.execPath,
+        args: ["--background"],
+      });
+    save();
+  });
+  ipcMain.handle("cities", async (e, name) => {
+    requireManager(e);
+    if (typeof name !== "string" || name.trim().length < 2) return [];
+    return (
+      (
+        await json(
+          "https://geocoding-api.open-meteo.com/v1/search?name=" +
+            encodeURIComponent(name.slice(0, 100)) +
+            "&count=8&language=ru&format=json",
+        )
+      ).results || []
+    );
+  });
+  ipcMain.handle("weather", async (e, id) => {
+    const w = selected(e, id),
+      key = [w.latitude, w.longitude, w.units].join(",");
+    const cached = weatherCache.get(key);
+    if (cached && Date.now() - cached.time < 600000) return cached;
+    try {
+      const data = await json(
+        `https://api.open-meteo.com/v1/forecast?latitude=${w.latitude}&longitude=${w.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&temperature_unit=${w.units}&timezone=auto&forecast_days=1`,
+      );
+      const result = { ...data, time: Date.now() };
+      weatherCache.set(key, result);
+      return result;
+    } catch (error) {
+      if (cached) return { ...cached, stale: true };
+      throw Error("Нет данных о погоде. Проверьте подключение.");
+    }
+  });
+  ipcMain.handle("drag-start", (e, id) => {
+    const w = selected(e, id);
+    if (w.locked) return;
+    drag = { id, start: screen.getCursorScreenPoint(), x: w.x, y: w.y };
+  });
+  ipcMain.handle("drag-end", () => {
+    if (drag) {
+      drag = null;
+      save();
+    }
+  });
+  ipcMain.handle("check-updates", () => checkUpdates());
+  ipcMain.handle("download-update", async () => {
+    if (update.required && update.status !== "downloading") {
+      try {
+        if (!updater.updateInfoAndProvider) await updater.checkForUpdates();
+        await updater.downloadUpdate();
+      } catch (e) {
+        log(e);
+        update = {
+          ...update,
+          status: "error",
+          message: "Не удалось загрузить обновление. Повторите попытку.",
+        };
+        broadcast();
+      }
+    }
+  });
+  ipcMain.handle("install-update", () => {
+    if (update.status === "downloaded") {
+      store.save();
+      quitting = true;
+      updater.quitAndInstall(false, true);
+    }
+  });
+  ipcMain.handle("quit", () => {
+    quitting = true;
+    app.quit();
+  });
+}
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on("second-instance", () => openManager());
+  app.on("window-all-closed", () => {});
+  app.on("before-quit", () => {
+    quitting = true;
+    if (store) store.save();
+  });
+  app
+    .whenReady()
+    .then(async () => {
+      store = new Store(app.getPath("userData"));
+      desktop = require("./desktop");
+      updater = configureUpdates();
+      if (store.data.pendingUpdate)
+        update = {
+          ...store.data.pendingUpdate,
+          status: "available",
+          required: true,
+        };
+      registerIPC();
+      app.setAppUserModelId("com.adler.widget");
+      if (app.isPackaged && !smoke && !qaProfile)
+        app.setLoginItemSettings({
+          name: "Widget",
+          openAtLogin: store.data.autostart,
+          path: process.execPath,
+          args: ["--background"],
+        });
+      const icon = nativeImage.createFromPath(
+        path.join(__dirname, "../assets/icon.png"),
+      );
+      tray = new Tray(icon.resize({ width: 32, height: 32 }));
+      tray.setToolTip("Widget — виджеты рабочего стола");
+      tray.setContextMenu(
+        Menu.buildFromTemplate([
+          { label: "Открыть Widget", click: openManager },
+          {
+            label: "Вернуть виджеты на экран",
+            click: () => {
+              for (let i = 0; i < store.data.widgets.length; i++) {
+                const w = store.data.widgets[i],
+                  area = screen.getPrimaryDisplay().workArea;
+                w.x = area.x + 40 + (i % 8) * 30;
+                w.y = area.y + 40 + (i % 8) * 30;
+                place(w, windows.get(w.id));
+              }
+              save();
+            },
+          },
+          { type: "separator" },
+          {
+            label: "Завершить работу",
+            click: () => {
+              quitting = true;
+              app.quit();
+            },
+          },
+        ]),
+      );
+      tray.on("double-click", openManager);
+      store.data.widgets = store.data.widgets
+        .filter((w) => TYPES.includes(w.type))
+        .map((w) =>
+          clampBounds(
+            w,
+            screen.getAllDisplays().map((d) => d.workArea),
+          ),
+        );
+      for (const w of store.data.widgets) widgetWindow(w);
+      if (!process.argv.includes("--background")) openManager();
+      else checkUpdates();
+      setInterval(() => {
+        if (!drag) return;
+        const w = store.data.widgets.find((w) => w.id === drag.id);
+        if (!w) return;
+        const p = screen.getCursorScreenPoint();
+        w.x = drag.x + p.x - drag.start.x;
+        w.y = drag.y + p.y - drag.start.y;
+        place(w, windows.get(w.id));
+      }, 25).unref();
+      setInterval(() => {
+        for (const w of store.data.widgets) {
+          const win = windows.get(w.id);
+          if (win && !win.isDestroyed()) place(w, win);
+          else widgetWindow(w);
+        }
+      }, 7000).unref();
+      screen.on("display-removed", () => {
+        store.data.widgets = store.data.widgets.map((w) =>
+          clampBounds(
+            w,
+            screen.getAllDisplays().map((d) => d.workArea),
+          ),
+        );
+        for (const w of store.data.widgets) place(w, windows.get(w.id));
+        save();
+      });
+      if (smoke)
+        require("./smoke")({
+          app,
+          manager,
+          store,
+          windows,
+          widgetWindow,
+          save,
+          state,
+          failures,
+          desktop,
+          setUpdate: (value) => {
+            update = value;
+            broadcast();
+          },
+        });
+    })
+    .catch((e) => {
+      log(e);
+      dialog.showErrorBox("Widget", String(e));
+      app.quit();
+    });
+}
