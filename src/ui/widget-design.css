@@ -43,6 +43,10 @@
   background: currentColor;
   mask: url("settings.svg") center / contain no-repeat;
 }
+.widget.no-title .notes-toolbar,
+.widget.no-title .calendar-nav {
+  margin-right: 40px;
+}
 .widget-style-photo-round .widget-menu {
   top: calc(50% - 16px);
   right: calc(50% - min(100cqw, 100cqh) / 2 + 12px);

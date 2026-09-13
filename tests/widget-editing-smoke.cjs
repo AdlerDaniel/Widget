@@ -35,6 +35,8 @@ module.exports = async ({
       path.join(out, "gear-max-radius.png"),
       (await win.webContents.capturePage()).toPNG(),
     );
+    await js(`window.widgetAPI.patch('${note.id}',{showTitle:false})`);
+    checks.push({name:'hidden heading keeps add note clear of gear',ok:await js(`document.querySelector('#note-add').getBoundingClientRect().right<document.querySelector('#widget-edit').getBoundingClientRect().left`)});
     await js(`document.querySelector('#widget-edit').focus()`);
     target = null;
     await wait(300);
@@ -120,6 +122,8 @@ module.exports = async ({
     const cal = store.data.widgets.find((w) => w.type === "calendar"),
       cw = windows.get(cal.id),
       cj = (s) => cw.webContents.executeJavaScript(s);
+    await cj(`window.widgetAPI.patch('${cal.id}',{showTitle:false})`);
+    checks.push({name:'hidden heading keeps calendar navigation clear of gear',ok:await cj(`document.querySelector('#next-month').getBoundingClientRect().right<document.querySelector('#widget-edit').getBoundingClientRect().left`)});
     for (const [day, style, color] of [
       [15, "dot", "#ffa344"],
       [16, "ring", "#4dd8b4"],
