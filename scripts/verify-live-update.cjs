@@ -106,7 +106,7 @@ async function session(exe, profile, action) {
       });
       checks.push({
         name: "release notes supplied by published manifest",
-        ok: available.update.notes.includes("My Widget"),
+        ok: require("../changes.json").every((note) => available.update.notes.includes(note)),
       });
       checks.push({
         name: "mandatory update enforced",
