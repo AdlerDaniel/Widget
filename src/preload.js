@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld("widgetAPI", {
   cities: (n) => ipcRenderer.invoke("cities", n),
   weather: (id) => ipcRenderer.invoke("weather", id),
   dragStart: (id) => ipcRenderer.invoke("drag-start", id),
+  resizeStart: (id) => ipcRenderer.invoke("resize-start", id),
+  resizeStep: (id, dx, dy) => ipcRenderer.invoke("resize-step", id, dx, dy),
   dragEnd: () => ipcRenderer.invoke("drag-end"),
   checkUpdates: () => ipcRenderer.invoke("check-updates"),
   downloadUpdate: () => ipcRenderer.invoke("download-update"),

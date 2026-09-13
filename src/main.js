@@ -16,6 +16,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 const Store = require("./store");
+const { styles, resizeBounds } = require("./widget-styles");
 const { newer } = require("./version");
 const themeTools = require("./themes");
 function systemColors() {
@@ -61,6 +62,7 @@ function state() {
     system = systemColors();
   return {
     ...store.data,
+    widgetStyles: styles,
     appearance,
     system,
     palette: themeTools.resolveTheme(appearance.theme, system),
@@ -407,12 +409,49 @@ function registerIPC() {
     }
   });
   ipcMain.handle("drag-start", (e, id) => {
+    requireUnlocked();
     const w = selected(e, id);
     if (w.locked) return;
-    drag = { id, start: screen.getCursorScreenPoint(), x: w.x, y: w.y };
+    drag = {
+      id,
+      mode: "move",
+      start: screen.getCursorScreenPoint(),
+      x: w.x,
+      y: w.y,
+    };
   });
-  ipcMain.handle("drag-end", () => {
-    if (drag) {
+  ipcMain.handle("resize-start", (e, id) => {
+    requireUnlocked();
+    const w = selected(e, id);
+    if (w.locked) return;
+    drag = {
+      id,
+      mode: "resize",
+      start: screen.getCursorScreenPoint(),
+      width: w.width,
+      height: w.height,
+    };
+  });
+  ipcMain.handle("resize-step", (e, id, dx, dy) => {
+    requireUnlocked();
+    const w = selected(e, id);
+    if (w.locked) return;
+    if (
+      !Number.isFinite(dx) ||
+      !Number.isFinite(dy) ||
+      Math.abs(dx) > 40 ||
+      Math.abs(dy) > 40
+    )
+      throw Error("Некорректный размер");
+    Object.assign(w, resizeBounds(w, dx, dy));
+    place(w, windows.get(id));
+    save();
+  });
+  ipcMain.handle("drag-end", (e) => {
+    if (
+      drag &&
+      BrowserWindow.fromWebContents(e.sender) === windows.get(drag.id)
+    ) {
       drag = null;
       save();
     }
@@ -533,8 +572,24 @@ if (!app.requestSingleInstanceLock()) {
         const w = store.data.widgets.find((w) => w.id === drag.id);
         if (!w) return;
         const p = screen.getCursorScreenPoint();
-        w.x = drag.x + p.x - drag.start.x;
-        w.y = drag.y + p.y - drag.start.y;
+        if (w.locked || update.required) {
+          drag = null;
+          save();
+          return;
+        }
+        if (drag.mode === "resize")
+          Object.assign(
+            w,
+            resizeBounds(
+              { ...w, width: drag.width, height: drag.height },
+              p.x - drag.start.x,
+              p.y - drag.start.y,
+            ),
+          );
+        else {
+          w.x = drag.x + p.x - drag.start.x;
+          w.y = drag.y + p.y - drag.start.y;
+        }
         place(w, windows.get(w.id));
       }, 25).unref();
       setInterval(() => {

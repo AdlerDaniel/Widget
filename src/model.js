@@ -1,6 +1,7 @@
 "use strict";
 const crypto = require("node:crypto");
 const { validTheme } = require("./themes");
+const { validStyle, styleDefaults } = require("./widget-styles");
 const TYPES = ["weather", "clock", "note", "photo", "calendar"];
 const sizes = {
   weather: [300, 280],
@@ -37,11 +38,18 @@ function createWidget(type, offset = 0) {
     hour12: false,
     seconds: true,
     locked: false,
+    style: "card",
+    showTitle: true,
+    showBackground: true,
     events: {},
   };
 }
 function patchWidget(widget, patch) {
   const out = { ...widget };
+  if (validStyle(widget.type, patch.style)) {
+    out.style = patch.style;
+    Object.assign(out, styleDefaults(patch.style));
+  }
   if (validTheme(patch.theme, true)) out.theme = patch.theme;
   for (const key of ["title", "text", "city"])
     if (typeof patch[key] === "string")
@@ -63,7 +71,13 @@ function patchWidget(widget, patch) {
   ])
     if (Number.isFinite(patch[key]))
       out[key] = Math.min(max, Math.max(min, patch[key]));
-  for (const key of ["locked", "seconds", "hour12"])
+  for (const key of [
+    "locked",
+    "seconds",
+    "hour12",
+    "showTitle",
+    "showBackground",
+  ])
     if (typeof patch[key] === "boolean") out[key] = patch[key];
   if (["cover", "contain"].includes(patch.fit)) out.fit = patch.fit;
   if (["celsius", "fahrenheit"].includes(patch.units)) out.units = patch.units;

@@ -92,7 +92,7 @@ function mine() {
 }
 function settings() {
   const u = state.update;
-  return `<div class="eyebrow">ПАРАМЕТРЫ</div><h1>Удобно каждый день</h1>${appAppearancePanel()}<div class="settings-panel" style="margin-top:25px"><h2>Запуск вместе с Windows</h2><p>Ваши виджеты появятся автоматически после входа в систему. Окно каталога открываться не будет.</p><label class="check"><input id="autostart" type="checkbox" ${state.autostart ? "checked" : ""}>Включать виджеты при входе в Windows</label></div><div class="settings-panel"><div class="row spread"><h2>Версия ${esc(state.version)}</h2><span class="pill">${u.status === "checking" ? "Проверяем…" : u.status === "current" ? "Установлена актуальная версия" : "Обновления"}</span></div><p>${(state.changes || []).map(esc).join("<br>")}</p>${u.status === "error" ? `<p class="status-error">${esc(u.message)}</p>` : ""}<button class="secondary" id="check-update">Проверить обновления</button></div><div class="settings-panel"><h2>Как управлять виджетами</h2><p>Перетаскивайте виджет за его заголовок. Кнопка «⋯» открывает настройки. Записи сохраняются автоматически. Пункт «Вернуть виджеты на экран» в трее поможет после смены монитора.</p><p class="small">Погода: Open-Meteo · CC BY 4.0. Фотографии и заметки хранятся на вашем компьютере.</p></div>`;
+  return `<div class="eyebrow">ПАРАМЕТРЫ</div><h1>Удобно каждый день</h1>${appAppearancePanel()}<div class="settings-panel" style="margin-top:25px"><h2>Запуск вместе с Windows</h2><p>Ваши виджеты появятся автоматически после входа в систему. Окно каталога открываться не будет.</p><label class="check"><input id="autostart" type="checkbox" ${state.autostart ? "checked" : ""}>Включать виджеты при входе в Windows</label></div><div class="settings-panel"><div class="row spread"><h2>Версия ${esc(state.version)}</h2><span class="pill">${u.status === "checking" ? "Проверяем…" : u.status === "current" ? "Установлена актуальная версия" : "Обновления"}</span></div><p>${(state.changes || []).map(esc).join("<br>")}</p>${u.status === "error" ? `<p class="status-error">${esc(u.message)}</p>` : ""}<button class="secondary" id="check-update">Проверить обновления</button></div><div class="settings-panel"><h2>Как управлять виджетами</h2><p>Меню «⋯» появляется через 2 секунды наведения. Потяните за нижний правый угол, чтобы изменить размер. Перемещайте виджет за заголовок или свободное место. Записи сохраняются автоматически. Пункт «Вернуть виджеты на экран» в трее поможет после смены монитора.</p><p class="small">Погода: Open-Meteo · CC BY 4.0. Фотографии и заметки хранятся на вашем компьютере.</p></div>`;
 }
 function field(label, input, wide = false) {
   return `<label class="field${wide ? " wide" : ""}">${label}${input}</label>`;
@@ -105,7 +105,7 @@ function editPanel() {
   }
   const input = (key, type = "text", extra = "") =>
     `<input data-prop="${key}" type="${type}" value="${esc(w[key])}" ${extra}>`;
-  return `<button class="back" id="back">← Мои виджеты</button><div class="intro"><div><div class="eyebrow">ИНДИВИДУАЛЬНЫЙ СТИЛЬ</div><h1>${names[w.type]}</h1><p>Изменения сразу появятся на рабочем столе.</p></div></div>${widgetAppearancePanel(w)}<div class="settings-panel"><div class="editor-preview" id="editor-preview" style="background:${w.background};color:${w.foreground};border-radius:${w.radius}px"><strong>${esc(w.title || names[w.type])}</strong><span style="color:${w.accent}">Aa · 123</span></div><div class="form-grid">${field("Название", input("title", "text", `placeholder="${names[w.type]}"`), true)}${field("Цвет фона", input("background", "color"))}${field("Цвет текста", input("foreground", "color"))}${field("Акцент", input("accent", "color"))}${widgetSliders(w)}</div><label class="check"><input data-prop="locked" type="checkbox" ${w.locked ? "checked" : ""}>Закрепить положение</label></div><div class="settings-panel">${w.type === "weather" ? `<h2>Ваш город</h2><p class="small">Сейчас: <span id="current-city">${esc(w.city)}</span></p><div class="row"><input id="city-search" placeholder="Название города" style="flex:1"><button class="secondary" id="search-city">Найти</button></div><div class="city-results" id="city-results"></div><label class="field" style="margin-top:18px">Единицы температуры<select data-prop="units"><option value="celsius" ${w.units === "celsius" ? "selected" : ""}>Градусы Цельсия · °C</option><option value="fahrenheit" ${w.units === "fahrenheit" ? "selected" : ""}>Градусы Фаренгейта · °F</option></select></label>` : w.type === "clock" ? `<h2>Отображение времени</h2><label class="check"><input data-prop="seconds" type="checkbox" ${w.seconds ? "checked" : ""}>Показывать секунды</label><label class="check"><input data-prop="hour12" type="checkbox" ${w.hour12 ? "checked" : ""}>12-часовой формат</label>` : w.type === "photo" ? `<h2>Любимый кадр</h2><p class="small">PNG, JPG или WebP, до 30 МБ. Копия фото сохраняется в приложении.</p><button class="primary" id="choose-photo">Выбрать фотографию</button><label class="field" style="margin-top:18px">Размещение<select data-prop="fit"><option value="cover" ${w.fit === "cover" ? "selected" : ""}>Заполнить виджет</option><option value="contain" ${w.fit === "contain" ? "selected" : ""}>Показать фото целиком</option></select></label>` : w.type === "note" ? `<h2>Текст заметки</h2><textarea data-prop="text" rows="7" style="width:100%" placeholder="Запишите важное…">${esc(w.text)}</textarea><p class="hint">Также можно писать прямо в виджете.</p>` : `<h2>Планы на каждый день</h2><p>Выберите день в календаре на рабочем столе и напишите заметку под ним. Даты с записями отмечены точкой.</p>`}</div><button class="danger" id="remove-widget">Удалить виджет</button><span class="hint" style="margin-left:15px">Будут удалены и его записи</span>`;
+  return `<button class="back" id="back">← Мои виджеты</button><div class="intro"><div><div class="eyebrow">ИНДИВИДУАЛЬНЫЙ СТИЛЬ</div><h1>${names[w.type]}</h1><p>Изменения сразу появятся на рабочем столе.</p></div></div>${widgetDesignPanel(w)}${widgetAppearancePanel(w)}<div class="settings-panel"><div class="editor-preview" id="editor-preview" style="background:${w.background};color:${w.foreground};border-radius:${w.radius}px"><strong>${esc(w.title || names[w.type])}</strong><span style="color:${w.accent}">Aa · 123</span></div><div class="form-grid">${field("Название", input("title", "text", `placeholder="${names[w.type]}"`), true)}${field("Цвет фона", input("background", "color"))}${field("Цвет текста", input("foreground", "color"))}${field("Акцент", input("accent", "color"))}${widgetSliders(w)}</div><label class="check"><input data-prop="locked" type="checkbox" ${w.locked ? "checked" : ""}>Закрепить положение</label></div><div class="settings-panel">${w.type === "weather" ? `<h2>Ваш город</h2><p class="small">Сейчас: <span id="current-city">${esc(w.city)}</span></p><div class="row"><input id="city-search" placeholder="Название города" style="flex:1"><button class="secondary" id="search-city">Найти</button></div><div class="city-results" id="city-results"></div><label class="field" style="margin-top:18px">Единицы температуры<select data-prop="units"><option value="celsius" ${w.units === "celsius" ? "selected" : ""}>Градусы Цельсия · °C</option><option value="fahrenheit" ${w.units === "fahrenheit" ? "selected" : ""}>Градусы Фаренгейта · °F</option></select></label>` : w.type === "clock" ? `<h2>Отображение времени</h2><label class="check"><input data-prop="seconds" type="checkbox" ${w.seconds ? "checked" : ""}>Показывать секунды</label><label class="check"><input data-prop="hour12" type="checkbox" ${w.hour12 ? "checked" : ""}>12-часовой формат</label>` : w.type === "photo" ? `<h2>Любимый кадр</h2><p class="small">PNG, JPG или WebP, до 30 МБ. Копия фото сохраняется в приложении.</p><button class="primary" id="choose-photo">Выбрать фотографию</button><label class="field" style="margin-top:18px">Размещение<select data-prop="fit"><option value="cover" ${w.fit === "cover" ? "selected" : ""}>Заполнить виджет</option><option value="contain" ${w.fit === "contain" ? "selected" : ""}>Показать фото целиком</option></select></label>` : w.type === "note" ? `<h2>Текст заметки</h2><textarea data-prop="text" rows="7" style="width:100%" placeholder="Запишите важное…">${esc(w.text)}</textarea><p class="hint">Также можно писать прямо в виджете.</p>` : `<h2>Планы на каждый день</h2><p>Выберите день в календаре на рабочем столе и напишите заметку под ним. Даты с записями отмечены точкой.</p>`}</div><button class="danger" id="remove-widget">Удалить виджет</button><span class="hint" style="margin-left:15px">Будут удалены и его записи</span>`;
 }
 function updateOverlay() {
   const u = state.update;
@@ -128,6 +128,7 @@ function renderManager() {
     )}</nav><div class="sidebar-bottom"><p class="small muted"><span class="live-dot"></span>Ваш рабочий стол</p><span class="small muted">My Widget · ${esc(state.version)}</span></div></aside><main class="main">${editing ? editPanel() : view === "mine" ? mine() : view === "settings" ? settings() : catalog()}</main></div>${updateOverlay()}`;
   bindManager();
   bindAppearance();
+  bindWidgetDesign();
 }
 function bindManager() {
   root.querySelectorAll("[data-nav]").forEach(
@@ -269,15 +270,15 @@ async function fetchWeather(w, force = false) {
 }
 function widgetContent(w) {
   if (w.type === "clock")
-    return '<div class="widget-content clock-content"><div class="clock-time" id="time"></div><div class="clock-date" id="date"></div><div class="clock-weekday" id="weekday"></div></div>';
+    return `<div class="widget-content clock-content">${w.style === "clock-dial" ? clockDial() : ""}<div class="clock-time" id="time"></div><div class="clock-date" id="date"></div><div class="clock-weekday" id="weekday"></div></div>`;
   if (w.type === "note")
     return `<div class="widget-content"><textarea class="note-area" id="note" placeholder="Запишите важное…" aria-label="Текст заметки">${esc(w.text)}</textarea><div class="note-footer">Сохраняется автоматически</div></div>`;
   if (w.type === "photo")
-    return `<div class="widget-content">${w.photo ? `<img class="photo-image" src="${esc(w.photo)}" style="object-fit:${w.fit}" alt="Ваше фото">` : '<button class="photo-placeholder" id="widget-photo"><span>＋</span>Добавить своё фото</button>'}</div>`;
+    return `<div class="widget-content">${w.photo ? `<img draggable="false" class="photo-image" src="${esc(w.photo)}" style="object-fit:${w.fit}" alt="Ваше фото">` : '<button class="photo-placeholder" id="widget-photo"><span>＋</span>Добавить своё фото</button>'}</div>`;
   if (w.type === "weather") {
     const current = weather?.current;
     const [symbol, desc] = weatherDescription(current?.weather_code);
-    return `<div class="widget-content">${current ? `<div class="row spread"><span class="weather-temp">${Math.round(current.temperature_2m)}°</span><span class="weather-symbol">${symbol}</span></div><div class="weather-desc">${desc}</div><div class="weather-detail"><span>Ощущается ${Math.round(current.apparent_temperature)}°</span><span>${current.relative_humidity_2m}%</span></div><div class="weather-detail" style="border:0"><span>Ветер ${Math.round(current.wind_speed_10m)} км/ч</span><span>${w.units === "fahrenheit" ? "°F" : "°C"}</span></div>` : `<div class="weather-error">${weatherError || "Загружаем погоду…"}${weatherError ? '<button class="secondary" id="retry-weather" style="margin-top:10px">Повторить</button>' : ""}</div>`}<div class="weather-attribution">Open-Meteo · ${weather?.stale ? "Сохранённые данные" : weather ? "Обновлено " + new Date(weather.time).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }) : "CC BY 4.0"}</div></div>`;
+    return `<div class="widget-content">${current ? `<div class="row spread weather-main"><span class="weather-temp">${Math.round(current.temperature_2m)}°</span><span class="weather-symbol">${["weather-sky", "weather-orbit"].includes(w.style) ? weatherArt(current.weather_code) : symbol}</span></div><div class="weather-desc">${desc}</div><div class="weather-detail"><span>Ощущается ${Math.round(current.apparent_temperature)}°</span><span>${current.relative_humidity_2m}%</span></div><div class="weather-detail" style="border:0"><span>Ветер ${Math.round(current.wind_speed_10m)} км/ч</span><span>${w.units === "fahrenheit" ? "°F" : "°C"}</span></div>` : `<div class="weather-error">${weatherError || "Загружаем погоду…"}${weatherError ? '<button class="secondary" id="retry-weather" style="margin-top:10px">Повторить</button>' : ""}</div>`}<div class="weather-attribution">Open-Meteo · ${weather?.stale ? "Сохранённые данные" : weather ? "Обновлено " + new Date(weather.time).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }) : "CC BY 4.0"}</div></div>`;
   }
   const year = month.getFullYear(),
     m = month.getMonth(),
@@ -295,7 +296,7 @@ function widgetContent(w) {
 }
 function renderWidget() {
   const w = state.widgets.find((w) => w.id === id);
-  if (!w) return;
+  if (!w || widgetGesture) return;
   document.body.classList.add("widget-body");
   const active = document.activeElement,
     focusId = active?.id,
@@ -303,25 +304,19 @@ function renderWidget() {
     selectionEnd = active?.selectionEnd,
     scroll = active?.scrollTop,
     typing = active?.tagName === "TEXTAREA" ? active.value : null;
-  root.innerHTML = `<article class="widget" style="opacity:${(w.widgetOpacity ?? 100) / 100};--bg:${w.background}${Math.round(
+  root.innerHTML = `<article class="widget widget-type-${w.type} widget-style-${w.style || "card"} ${w.showTitle === false ? "no-title" : ""} ${w.showBackground === false ? "no-background" : ""} ${w.locked ? "is-locked" : ""}" style="opacity:${(w.widgetOpacity ?? 100) / 100};--bg:${w.background}${Math.round(
     w.opacity * 2.55,
   )
     .toString(16)
     .padStart(
       2,
       "0",
-    )};--fg:${w.foreground};--accent:${w.accent};--on-accent:${w.accentForeground};--radius:${w.radius}px;--font-size:${w.fontSize}px"><header class="widget-header" id="drag"><span class="widget-title">${esc(w.title || (w.type === "weather" ? w.city : names[w.type]))}${w.locked ? " · ⌁" : ""}</span><button id="widget-edit" aria-label="Настройки виджета">⋯</button></header>${state.update.required ? '<div class="widget-update">Доступна новая версия<br><button id="widget-open-update">Обновить My Widget</button></div>' : widgetContent(w)}</article>`;
+    )};--fg:${w.foreground};--accent:${w.accent};--on-accent:${w.accentForeground};--radius:${w.radius}px;--font-size:${w.fontSize}px"><header class="widget-header" id="drag"><span class="widget-title">${esc(w.title || (w.type === "weather" ? w.city : names[w.type]))}${w.locked ? " · ⌁" : ""}</span></header><div class="widget-drag-strip" aria-hidden="true"></div><button class="widget-menu" id="widget-edit" aria-label="Настройки виджета" title="Настройки">⋯</button>${!w.locked ? '<button id="resize-grip" class="resize-grip" aria-label="Изменить размер виджета" title="Потяните для изменения размера. Стрелки — 5 px, Shift + стрелки — 20 px"></button>' : ""}${state.update.required ? '<div class="widget-update">Доступна новая версия<br><button id="widget-open-update">Обновить My Widget</button></div>' : widgetContent(w)}</article>`;
   bind("#widget-edit", () => api.edit(id));
   bind("#widget-open-update", () => api.edit(id));
   bind("#widget-photo", () => api.photo(id));
   bind("#retry-weather", () => fetchWeather(w, true));
-  const header = document.querySelector("#drag");
-  header.onpointerdown = (e) => {
-    if (e.target.closest("button") || w.locked) return;
-    header.setPointerCapture(e.pointerId);
-    api.dragStart(id);
-  };
-  header.onpointerup = header.onlostpointercapture = () => api.dragEnd();
+  mountWidgetInteractions(w);
   const note = document.querySelector("#note");
   if (note) note.oninput = () => act(() => api.patch(id, { text: note.value }));
   const event = document.querySelector("#event");
@@ -363,6 +358,17 @@ function tick() {
     time = document.querySelector("#time");
   if (!time || !w) return;
   const d = new Date();
+  for (const [key, angle] of [
+    ["hour", (d.getHours() % 12) * 30 + d.getMinutes() / 2],
+    ["minute", d.getMinutes() * 6 + d.getSeconds() / 10],
+    ["second", d.getSeconds() * 6],
+  ]) {
+    const hand = document.querySelector("#" + key + "-hand");
+    if (hand) {
+      hand.setAttribute("transform", "rotate(" + angle + " 100 100)");
+      if (key === "second") hand.style.display = w.seconds ? "" : "none";
+    }
+  }
   time.textContent = d.toLocaleTimeString(w.hour12 ? "en-US" : "ru-RU", {
     hour: "2-digit",
     minute: "2-digit",

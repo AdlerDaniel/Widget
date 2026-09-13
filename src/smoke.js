@@ -126,6 +126,7 @@ module.exports = async ({
       checks,
       out,
     });
+    await require('../tests/widget-design-smoke.cjs')({manager,store,windows,desktop,checks,out,save});
     setUpdate({
       status: "available",
       required: true,
