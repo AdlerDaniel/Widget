@@ -57,7 +57,13 @@ async function until(client, statuses, timeout = 120000) {
   const start = Date.now();
   let previous;
   while (Date.now() - start < timeout) {
-    const s = await client.eval("window.widgetAPI.state()");
+    const s = await client.eval(
+      "window.widgetAPI ? window.widgetAPI.state() : null",
+    );
+    if (!s) {
+      await wait(250);
+      continue;
+    }
     if (s.update.status !== previous) {
       console.log("Update status: " + s.update.status);
       previous = s.update.status;
@@ -106,7 +112,9 @@ async function session(exe, profile, action) {
       });
       checks.push({
         name: "release notes supplied by published manifest",
-        ok: require("../changes.json").every((note) => available.update.notes.includes(note)),
+        ok: require("../changes.json").every((note) =>
+          available.update.notes.includes(note),
+        ),
       });
       checks.push({
         name: "mandatory update enforced",
