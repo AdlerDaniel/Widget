@@ -17,6 +17,7 @@ module.exports = async ({
   const out = path.join(__dirname, "../test-output");
   fs.mkdirSync(out, { recursive: true });
   const checks = [];
+  const testDate = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-15`;
   try {
     await wait(2500);
     if (!store.data.widgets.length) {
@@ -66,15 +67,15 @@ module.exports = async ({
     await windows
       .get(calendar.id)
       .webContents.executeJavaScript(
-        `document.querySelector('[data-date="2026-09-15"]').click();document.querySelector('#event').value='Встреча в 15:00';document.querySelector('#event').dispatchEvent(new Event('input'));`,
+        `document.querySelector('[data-date="${testDate}"]').click();document.querySelector('#event').value='Встреча в 15:00';document.querySelector('#event').dispatchEvent(new Event('input'));`,
       );
     await wait(300);
     checks.push({
       name: "calendar date-specific note",
       ok:
-        calendar.events["2026-09-15"] === "Встреча в 15:00" ||
+        calendar.events[testDate] === "Встреча в 15:00" ||
         store.data.widgets.find((w) => w.id === calendar.id).events[
-          "2026-09-15"
+          testDate
         ] === "Встреча в 15:00",
     });
     await manager.webContents.executeJavaScript(

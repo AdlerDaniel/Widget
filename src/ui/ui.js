@@ -85,7 +85,7 @@ function catalog() {
     )
     .join(
       "",
-    )}<article class="card future">${icon("plus")}<h3>Место для нового</h3><p class="small">Коллекция будет расти<br>вместе с вами.</p></article></div><p class="hint" style="margin-top:20px">Виджеты останутся на рабочем столе после закрытия этого окна. Открыть Widget снова можно через значок в трее.</p>`;
+    )}<article class="card future">${icon("plus")}<h3>Место для нового</h3><p class="small">Коллекция будет расти<br>вместе с вами.</p></article></div><p class="hint" style="margin-top:20px">Виджеты останутся на рабочем столе после закрытия этого окна. Открыть My Widget снова можно через значок в трее.</p>`;
 }
 function mine() {
   return `<div class="eyebrow">НА РАБОЧЕМ СТОЛЕ</div><div class="intro"><div><h1>Мои виджеты</h1><p>Каждый со своим характером.</p></div><span class="pill">${state.widgets.length} из 30</span></div>${state.widgets.length ? state.widgets.map((w) => `<div class="list-item row spread"><div><h3>${esc(w.title || names[w.type])}</h3><span class="muted small">${names[w.type]} · ${w.width} × ${w.height}${w.locked ? " · Положение закреплено" : ""}</span></div><button class="secondary" data-edit="${w.id}">Настроить</button></div>`).join("") : '<div class="empty"><h2>Пока здесь тихо</h2><p class="muted">Добавьте первый виджет из коллекции.</p><button class="primary" data-nav="catalog">Открыть коллекцию</button></div>'}`;
@@ -110,11 +110,11 @@ function editPanel() {
 function updateOverlay() {
   const u = state.update;
   if (!u.required) return "";
-  return `<div class="update-overlay"><section class="update-box"><div class="eyebrow">ДОСТУПНА НОВАЯ ВЕРСИЯ</div><h2>Widget ${esc(u.version)}</h2><p class="muted">Чтобы продолжить работу, установите обновление.</p><pre>${esc(u.notes)}</pre>${u.status === "downloading" ? `<progress max="100" value="${u.percent || 0}"></progress><p>Загрузка: ${u.percent || 0}%</p>` : ""}${u.status === "error" ? `<p class="status-error">${esc(u.message)}</p>` : ""}<div class="row">${u.status === "downloaded" ? '<button class="primary" id="install-update">Установить и перезапустить</button>' : `<button class="primary" id="download-update" ${["checking", "downloading"].includes(u.status) ? "disabled" : ""}>${u.status === "downloading" ? "Загружаем…" : "Обновить сейчас"}</button>`}<button class="secondary" id="quit">Выйти</button></div></section></div>`;
+  return `<div class="update-overlay"><section class="update-box"><div class="eyebrow">ДОСТУПНА НОВАЯ ВЕРСИЯ</div><h2>My Widget ${esc(u.version)}</h2><p class="muted">Чтобы продолжить работу, установите обновление.</p><pre>${esc(u.notes)}</pre>${u.status === "downloading" ? `<progress max="100" value="${u.percent || 0}"></progress><p>Загрузка: ${u.percent || 0}%</p>` : ""}${u.status === "error" ? `<p class="status-error">${esc(u.message)}</p>` : ""}<div class="row">${u.status === "downloaded" ? '<button class="primary" id="install-update">Установить и перезапустить</button>' : `<button class="primary" id="download-update" ${["checking", "downloading"].includes(u.status) ? "disabled" : ""}>${u.status === "downloading" ? "Загружаем…" : "Обновить сейчас"}</button>`}<button class="secondary" id="quit">Выйти</button></div></section></div>`;
 }
 function renderManager() {
   applyAppPalette();
-  root.innerHTML = `<div class="shell"><aside class="sidebar"><div class="brand"><span class="brand-icon"><i></i><i></i><i></i><i></i></span>Widget</div><nav class="nav">${[
+  root.innerHTML = `<div class="shell"><aside class="sidebar"><div class="brand"><span class="brand-icon"><i></i><i></i><i></i><i></i></span>My Widget</div><nav class="nav">${[
     ["catalog", "Коллекция"],
     ["mine", "Мои виджеты"],
     ["settings", "Настройки"],
@@ -125,7 +125,7 @@ function renderManager() {
     )
     .join(
       "",
-    )}</nav><div class="sidebar-bottom"><p class="small muted"><span class="live-dot"></span>Ваш рабочий стол</p><span class="small muted">Widget · ${esc(state.version)}</span></div></aside><main class="main">${editing ? editPanel() : view === "mine" ? mine() : view === "settings" ? settings() : catalog()}</main></div>${updateOverlay()}`;
+    )}</nav><div class="sidebar-bottom"><p class="small muted"><span class="live-dot"></span>Ваш рабочий стол</p><span class="small muted">My Widget · ${esc(state.version)}</span></div></aside><main class="main">${editing ? editPanel() : view === "mine" ? mine() : view === "settings" ? settings() : catalog()}</main></div>${updateOverlay()}`;
   bindManager();
   bindAppearance();
 }
@@ -310,7 +310,7 @@ function renderWidget() {
     .padStart(
       2,
       "0",
-    )};--fg:${w.foreground};--accent:${w.accent};--on-accent:${w.accentForeground};--radius:${w.radius}px;--font-size:${w.fontSize}px"><header class="widget-header" id="drag"><span class="widget-title">${esc(w.title || (w.type === "weather" ? w.city : names[w.type]))}${w.locked ? " · ⌁" : ""}</span><button id="widget-edit" aria-label="Настройки виджета">⋯</button></header>${state.update.required ? '<div class="widget-update">Доступна новая версия<br><button id="widget-open-update">Обновить Widget</button></div>' : widgetContent(w)}</article>`;
+    )};--fg:${w.foreground};--accent:${w.accent};--on-accent:${w.accentForeground};--radius:${w.radius}px;--font-size:${w.fontSize}px"><header class="widget-header" id="drag"><span class="widget-title">${esc(w.title || (w.type === "weather" ? w.city : names[w.type]))}${w.locked ? " · ⌁" : ""}</span><button id="widget-edit" aria-label="Настройки виджета">⋯</button></header>${state.update.required ? '<div class="widget-update">Доступна новая версия<br><button id="widget-open-update">Обновить My Widget</button></div>' : widgetContent(w)}</article>`;
   bind("#widget-edit", () => api.edit(id));
   bind("#widget-open-update", () => api.edit(id));
   bind("#widget-photo", () => api.photo(id));

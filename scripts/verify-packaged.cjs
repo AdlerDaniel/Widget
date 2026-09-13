@@ -79,7 +79,12 @@ async function connect() {
   fixtures[2].photo = require("node:url").pathToFileURL(photo).href;
   fs.writeFileSync(
     path.join(profile, "settings.json"),
-    JSON.stringify({ schema: 1, autostart: false, widgets: fixtures }),
+    JSON.stringify({
+      schema: 1,
+      autostart: false,
+      widgets: fixtures,
+      pendingUpdate: { version, notes: "Already installed" },
+    }),
   );
   const checks = [];
   async function launch() {
@@ -115,6 +120,14 @@ async function connect() {
   try {
     const s = await run.client.eval("window.widgetAPI.state()");
     checks.push({ name: "packaged version", ok: s.version === version });
+    checks.push({
+      name: "new name and completed update gate",
+      ok:
+        !s.update.required &&
+        (await run.client.eval(
+          `document.title==='My Widget' && document.querySelector('.brand').textContent.trim()==='My Widget'`,
+        )),
+    });
     checks.push({
       name: "v1.0 migration preserves notes, calendar, photo and colors",
       ok: s.widgets.every(
@@ -158,7 +171,13 @@ async function connect() {
     await close(run);
   }
   const installer = fs.readFileSync(
-    path.join(root, `dist/Widget-Setup-${version}.exe`),
+    path.join(
+      root,
+      "dist",
+      require("../package.json")
+        .build.artifactName.replace("${version}", version)
+        .replace("${ext}", "exe"),
+    ),
   );
   const yml = fs.readFileSync(path.join(root, "dist/latest.yml"), "utf8");
   checks.push({

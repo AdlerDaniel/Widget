@@ -1,8 +1,8 @@
 {
   "name": "desktop-widget",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Персональные виджеты рабочего стола Windows",
-  "productName": "Widget",
+  "productName": "My Widget",
   "private": true,
   "main": "src/main.js",
   "scripts": {
@@ -22,8 +22,8 @@
   },
   "build": {
     "appId": "com.adler.widget",
-    "productName": "Widget",
-    "artifactName": "Widget-Setup-${version}.${ext}",
+    "productName": "My Widget",
+    "artifactName": "My-Widget-Setup-${version}.${ext}",
     "files": [
       "src/**/*",
       "assets/**/*",
@@ -37,7 +37,8 @@
     "win": {
       "target": "nsis",
       "icon": "assets/icon.ico",
-      "signExecutable": false
+      "signExecutable": false,
+      "executableName": "Widget"
     },
     "nsis": {
       "oneClick": false,
@@ -45,7 +46,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Widget",
+      "shortcutName": "My Widget",
       "deleteAppDataOnUninstall": false,
       "installerLanguages": [
         "ru_RU"

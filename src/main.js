@@ -16,6 +16,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 const Store = require("./store");
+const { newer } = require("./version");
 const themeTools = require("./themes");
 function systemColors() {
   return {
@@ -24,7 +25,8 @@ function systemColors() {
   };
 }
 const { TYPES, createWidget, patchWidget, clampBounds } = require("./model");
-app.setName("Widget");
+app.setPath("userData", path.join(app.getPath("appData"), "Widget"));
+app.setName("My Widget");
 const smoke = process.argv.includes("--smoke");
 const qaProfile = process.env.WIDGET_TEST_PROFILE;
 if (qaProfile) app.setPath("userData", path.resolve(qaProfile));
@@ -111,7 +113,7 @@ function openManager() {
     minWidth: 850,
     minHeight: 650,
     backgroundColor: "#10131b",
-    title: "Widget",
+    title: "My Widget",
     show: false,
     icon: path.join(__dirname, "../assets/icon.png"),
   });
@@ -151,7 +153,7 @@ function widgetWindow(w) {
     resizable: false,
     skipTaskbar: true,
     show: false,
-    title: "Widget — " + w.type,
+    title: "My Widget — " + w.type,
   });
   windows.set(w.id, win);
   win.loadFile(path.join(__dirname, "ui/index.html"), {
@@ -181,7 +183,7 @@ function requireUnlocked() {
 }
 function configureUpdates() {
   const { autoUpdater } = require("electron-updater");
-  autoUpdater.autoDownload = false;
+  autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.allowDowngrade = false;
   autoUpdater.on("update-available", (info) => {
@@ -367,7 +369,7 @@ function registerIPC() {
     store.data.autostart = Boolean(value);
     if (app.isPackaged && !smoke && !qaProfile)
       app.setLoginItemSettings({
-        name: "Widget",
+        name: "My Widget",
         openAtLogin: store.data.autostart,
         path: process.execPath,
         args: ["--background"],
@@ -462,17 +464,23 @@ if (!app.requestSingleInstanceLock()) {
       nativeTheme.on("updated", () => broadcast());
       desktop = require("./desktop");
       updater = configureUpdates();
-      if (store.data.pendingUpdate)
+      if (
+        store.data.pendingUpdate &&
+        newer(store.data.pendingUpdate.version, app.getVersion())
+      )
         update = {
           ...store.data.pendingUpdate,
           status: "available",
           required: true,
         };
+      else delete store.data.pendingUpdate;
       registerIPC();
       app.setAppUserModelId("com.adler.widget");
       if (app.isPackaged && !smoke && !qaProfile)
+        app.setLoginItemSettings({ name: "Widget", openAtLogin: false });
+      if (app.isPackaged && !smoke && !qaProfile)
         app.setLoginItemSettings({
-          name: "Widget",
+          name: "My Widget",
           openAtLogin: store.data.autostart,
           path: process.execPath,
           args: ["--background"],
@@ -481,10 +489,10 @@ if (!app.requestSingleInstanceLock()) {
         path.join(__dirname, "../assets/icon.png"),
       );
       tray = new Tray(icon.resize({ width: 32, height: 32 }));
-      tray.setToolTip("Widget — виджеты рабочего стола");
+      tray.setToolTip("My Widget — виджеты рабочего стола");
       tray.setContextMenu(
         Menu.buildFromTemplate([
-          { label: "Открыть Widget", click: openManager },
+          { label: "Открыть My Widget", click: openManager },
           {
             label: "Вернуть виджеты на экран",
             click: () => {
@@ -565,7 +573,7 @@ if (!app.requestSingleInstanceLock()) {
     })
     .catch((e) => {
       log(e);
-      dialog.showErrorBox("Widget", String(e));
+      dialog.showErrorBox("My Widget", String(e));
       app.quit();
     });
 }
