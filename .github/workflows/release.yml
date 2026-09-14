@@ -33,7 +33,7 @@ jobs:
           $package = Get-Content package.json -Raw | ConvertFrom-Json
           "value=$($package.version)" >> $env:GITHUB_OUTPUT
 
-           - name: Check whether this version is already published
+      - name: Check whether this version is already published
         id: existing
         shell: pwsh
         env:
