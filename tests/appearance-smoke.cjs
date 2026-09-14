@@ -4,7 +4,9 @@ module.exports = async ({ manager, store, windows, checks, out }) => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms)),
     js = (s) => manager.webContents.executeJavaScript(s);
   const note = store.data.widgets.find((w) => w.type === "note"),
-    win = windows.get(note.id);
+    win = windows.get(note.id),
+    clock = store.data.widgets.find((w) => w.type === "clock"),
+    clockWindow = windows.get(clock.id);
   const original = JSON.parse(JSON.stringify(store.data));
   await js(`window.widgetAPI.patch('${note.id}',{theme:'app'})`);
   await js(`document.querySelector('[data-nav="settings"]').click()`);
@@ -140,6 +142,20 @@ module.exports = async ({ manager, store, windows, checks, out }) => {
   const { systemPreferences, nativeTheme } = require("electron"),
     originalGet = systemPreferences.getAccentColor;
   try {
+    systemPreferences.getAccentColor = () => "050507ff";
+    nativeTheme.themeSource = "dark";
+    systemPreferences.emit("accent-color-changed", {}, "050507ff");
+    await wait(130);
+    checks.push({
+      name: "dark Windows accent is lightened wherever it is used as text",
+      ok:
+        (await js(
+          `getComputedStyle(document.documentElement).getPropertyValue('--ui-accentText').trim()!=='#050507'`,
+        )) &&
+        (await clockWindow.webContents.executeJavaScript(
+          `getComputedStyle(document.querySelector('.widget')).getPropertyValue('--accent-text').trim()!=='#050507'`,
+        )),
+    });
     systemPreferences.getAccentColor = () => "ed782aff";
     systemPreferences.emit("accent-color-changed", {}, "ed782aff");
     await wait(130);

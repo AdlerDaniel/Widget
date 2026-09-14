@@ -8,6 +8,7 @@ const {
   onAccent,
   contrastRatio,
   resolveAppearance,
+  readableColor,
 } = require("../src/themes");
 const { createWidget, patchWidget } = require("../src/model");
 test("twelve palettes and existing MediaCategorize colors", () => {
@@ -96,4 +97,18 @@ test("automatic text reaches readable contrast and manual colors stay independen
     resolveWidget(themed, { theme: "brown-dark" }, {}).foreground,
     "#12ab34",
   );
+});
+test("dark Windows accents remain readable as text in the app and widgets", () => {
+  const system = { accent: "#050507", dark: true };
+  const app = resolveAppearance({ theme: "system" }, system);
+  assert.equal(app.accent, system.accent);
+  assert.ok(contrastRatio(app.bg, app.accentText) >= 4.5);
+  assert.ok(contrastRatio(app.panel, app.accentText) >= 4.5);
+  const widget = resolveWidget(
+    { ...createWidget("clock"), theme: "system" },
+    { theme: "system" },
+    system,
+  );
+  assert.ok(contrastRatio(widget.background, widget.accentText) >= 4.5);
+  assert.notEqual(readableColor(widget.background, system.accent), system.accent);
 });

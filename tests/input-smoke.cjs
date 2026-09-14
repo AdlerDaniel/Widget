@@ -155,6 +155,21 @@ module.exports = async ({ manager, store, windows, desktop, checks, save }) => {
             `document.querySelector('#event').value==='Другой день'&&document.activeElement===document.querySelector('#event')`,
           ),
         });
+        await js(
+          `document.querySelector('#event').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}))`,
+        );
+        checks.push({
+          name: "Enter finishes calendar input and removes the caret",
+          ok: await js(
+            `document.activeElement!==document.querySelector('#event')`,
+          ),
+        });
+        checks.push({
+          name: "calendar input placeholder follows the readable widget text",
+          ok: await js(
+            `getComputedStyle(document.querySelector('#event'),'::placeholder').color===getComputedStyle(document.querySelector('.widget')).color`,
+          ),
+        });
       }
       await js("document.activeElement.blur()");
     }

@@ -128,6 +128,10 @@ function renderManager() {
     .join(
       "",
     )}</nav><div class="sidebar-bottom"><p class="small muted"><span class="live-dot"></span>Ваш рабочий стол</p><span class="small muted">My Widget · ${esc(state.version)}</span></div></aside><main class="main">${editing ? editPanel() : view === "mine" ? mine() : view === "settings" ? settings() : catalog()}</main></div>${updateOverlay()}`;
+  const editorPreview = document.querySelector("#editor-preview");
+  const editingWidget = state.widgets.find((w) => w.id === editing);
+  if (editorPreview && editingWidget)
+    editorPreview.lastElementChild.style.color = editingWidget.accentText;
   bindManager();
   bindAppearance();
   bindWidgetDesign();
@@ -324,7 +328,7 @@ function renderWidget() {
     .padStart(
       2,
       "0",
-    )};--fg:${w.foreground};--accent:${w.accent};--on-accent:${w.accentForeground};--radius:${w.radius}px;--font-size:${w.fontSize}px"><header class="widget-header" id="drag"><span class="widget-title">${esc(w.title || (w.type === "weather" ? w.city : names[w.type]))}${w.locked ? " · ⌁" : ""}</span></header><div class="widget-drag-strip" aria-hidden="true"></div><button class="widget-menu" id="widget-edit" aria-label="Настройки виджета" title="Настройки"><span class="gear-icon" aria-hidden="true"></span></button>${!w.locked ? '<button id="resize-grip" class="resize-grip" aria-label="Изменить размер виджета" title="Потяните для изменения размера. Стрелки — 5 px, Shift + стрелки — 20 px"></button>' : ""}${state.update.required ? '<div class="widget-update">Доступна новая версия<br><button id="widget-open-update">Обновить My Widget</button></div>' : widgetContent(w)}</article>`;
+    )};--fg:${w.foreground};--accent:${w.accent};--accent-text:${w.accentText};--on-accent:${w.accentForeground};--radius:${w.radius}px;--font-size:${w.fontSize}px"><header class="widget-header" id="drag"><span class="widget-title">${esc(w.title || (w.type === "weather" ? w.city : names[w.type]))}${w.locked ? " · ⌁" : ""}</span></header><div class="widget-drag-strip" aria-hidden="true"></div><button class="widget-menu" id="widget-edit" aria-label="Настройки виджета" title="Настройки"><span class="gear-icon" aria-hidden="true"></span></button>${!w.locked ? '<button id="resize-grip" class="resize-grip" aria-label="Изменить размер виджета" title="Потяните для изменения размера. Стрелки — 5 px, Shift + стрелки — 20 px"></button>' : ""}${state.update.required ? '<div class="widget-update">Доступна новая версия<br><button id="widget-open-update">Обновить My Widget</button></div>' : widgetContent(w)}</article>`;
   bind("#widget-edit", () => api.edit(id));
   bind("#widget-open-update", () => api.edit(id));
   bind("#widget-photo", () => api.photo(id));
@@ -342,6 +346,13 @@ function renderWidget() {
     event.addEventListener("compositionend", () =>
       event.oninput({ isComposing: false }),
     );
+  if (event)
+    event.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+        e.preventDefault();
+        event.blur();
+      }
+    });
   bind("#prev-month", () => {
     month = new Date(month.getFullYear(), month.getMonth() - 1, 1);
     selectedDate = dateKey(month);
@@ -471,7 +482,7 @@ api.onState((s) => {
       preview.style.color = w.foreground;
       preview.style.borderRadius = w.radius + "px";
       preview.firstElementChild.textContent = w.title || names[w.type];
-      preview.lastElementChild.style.color = w.accent;
+      preview.lastElementChild.style.color = w.accentText;
       root.querySelectorAll("[data-prop]").forEach((el) => {
         if (
           ["background", "foreground", "accent"].includes(el.dataset.prop) &&

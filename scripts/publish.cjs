@@ -10,7 +10,7 @@ function command(exe, args, capture = false) {
     encoding: "utf8",
     stdio: capture ? "pipe" : "inherit",
     windowsHide: true,
-    timeout: 300000,
+    timeout: 1200000,
   });
   if (r.status !== 0)
     throw Error(exe + " failed" + (capture ? ": " + r.stderr : ""));

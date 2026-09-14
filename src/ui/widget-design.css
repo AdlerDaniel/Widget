@@ -151,9 +151,9 @@
 .widget-style-note-sticky:not(.no-background) .notes-content {
   color: #20252c;
 }
-.widget-style-note-paper.no-background .notes-content,
-.widget-style-note-sticky.no-background .notes-content {
-  color: var(--accent);
+.auto-text.widget-style-note-paper.no-background .notes-content,
+.auto-text.widget-style-note-sticky.no-background .notes-content {
+  color: var(--accent-text);
 }
 .day.has-event:after {
   background: var(--marker);
@@ -271,7 +271,7 @@
 .widget-style-bare .note-area,
 .widget-style-bare .calendar-nav,
 .widget-style-bare .weather-temp {
-  color: var(--accent);
+  color: var(--accent-text);
   text-shadow: 0 1px 3px #0003;
 }
 .widget-style-bare .note-footer {
@@ -342,7 +342,7 @@
 }
 .widget-style-clock-digital .clock-time {
   font-size: clamp(30px, 18cqw, 150px) !important;
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 600;
   letter-spacing: -0.055em;
 }
@@ -414,7 +414,7 @@
   display: none;
 }
 .auto-text.widget-style-note-paper.no-background {
-  --fg: var(--accent);
+  --fg: var(--accent-text);
   color: var(--fg);
 }
 .widget-style-note-sticky {
@@ -443,7 +443,7 @@
   display: none;
 }
 .auto-text.widget-style-note-sticky.no-background {
-  --fg: var(--accent);
+  --fg: var(--accent-text);
 }
 .auto-text.widget-style-note-paper:not(.no-background) .note-area,
 .auto-text.widget-style-note-paper:not(.no-background) .widget-title {
@@ -455,7 +455,7 @@
 }
 .auto-text.widget-style-note-paper.no-background .note-area,
 .auto-text.widget-style-note-sticky.no-background .note-area {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .widget-style-calendar-planner .calendar-nav {
   padding: 10px 4px;
@@ -521,7 +521,7 @@
   border: 3px solid var(--accent);
   border-radius: 50%;
   font-size: clamp(30px, 17cqw, 70px);
-  color: var(--accent);
+  color: var(--accent-text);
   box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent) 10%, transparent);
 }
 .widget-style-weather-orbit .weather-symbol {
@@ -546,7 +546,7 @@
   gap: 18px;
 }
 .widget-style-weather-compact .weather-temp {
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: clamp(40px, 25cqw, 120px);
   font-weight: 500;
 }

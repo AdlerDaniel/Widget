@@ -170,7 +170,7 @@ p {
 .eyebrow {
   font-size: 11px;
   letter-spacing: 2px;
-  color: var(--ui-accent);
+  color: var(--ui-accentText, var(--ui-accent));
   margin-bottom: 13px;
   font-weight: 600;
 }
@@ -449,7 +449,7 @@ p {
 .back {
   margin-bottom: 20px;
   background: none;
-  color: var(--ui-accent);
+  color: var(--ui-accentText, var(--ui-accent));
   padding: 0;
 }
 .editor-preview {
@@ -538,6 +538,7 @@ p {
   --bg: #202839;
   --fg: #f4f6fc;
   --accent: var(--ui-accent);
+  --accent-text: var(--accent);
   height: 100vh;
   color: var(--fg);
   background: var(--bg);
@@ -603,7 +604,7 @@ p {
 }
 .clock-date {
   margin-top: 12px;
-  color: var(--accent);
+  color: var(--accent-text);
   text-align: center;
   font-size: 0.85em;
 }
@@ -659,7 +660,7 @@ p {
 }
 .photo-placeholder span {
   font-size: 38px;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .weather-temp {
   font-size: 3.5em;
@@ -668,7 +669,7 @@ p {
 }
 .weather-symbol {
   font-size: 3em;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .weather-desc {
   font-size: 0.9em;
@@ -771,6 +772,10 @@ p {
 .calendar-note textarea:focus {
   outline: 0;
 }
+.calendar-note textarea::placeholder {
+  color: var(--fg);
+  opacity: 0.72;
+}
 .widget-update {
   margin: auto;
   text-align: center;
@@ -816,6 +821,7 @@ p {
   --ui-muted: #baa7ca;
   --ui-border: #564267;
   --ui-accent: #c8a0f0;
+  --ui-accentText: #c8a0f0;
   --ui-selected: #47305e;
   --ui-onAccent: #111111;
   --ui-icon: #f5edfa;

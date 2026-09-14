@@ -116,6 +116,19 @@ function contrastText(background, preferred = "#ffffff") {
     ? "#ffffff"
     : "#111111";
 }
+function readableColor(background, color) {
+  if (contrastRatio(background, color) >= 4.5) return color;
+  const target =
+    contrastRatio(background, "#ffffff") >=
+    contrastRatio(background, "#111111")
+      ? "#ffffff"
+      : "#111111";
+  for (let amount = 0.05; amount <= 1; amount += 0.05) {
+    const candidate = mix(color, target, amount);
+    if (contrastRatio(background, candidate) >= 4.5) return candidate;
+  }
+  return target;
+}
 const themes = {};
 for (const [
   family,
@@ -193,7 +206,16 @@ function resolveAppearance(p, system) {
   const text = a.autoTextContrast
     ? contrastText(palette.bg, palette.text)
     : a.foreground;
-  return { ...palette, text, icon: contrastText(palette.panel, text) };
+  const accentText = readableColor(
+    palette.panel,
+    readableColor(palette.bg, palette.accent),
+  );
+  return {
+    ...palette,
+    text,
+    accentText,
+    icon: contrastText(palette.panel, text),
+  };
 }
 function resolveWidget(w, appAppearance, system) {
   let t;
@@ -204,6 +226,7 @@ function resolveWidget(w, appAppearance, system) {
   const autoTextContrast = w.autoTextContrast !== false;
   const foreground =
     autoTextContrast === false ? w.foreground : contrastText(t.panel, t.text);
+  const accentText = readableColor(t.panel, t.accent);
   return {
     ...w,
     theme: custom ? "custom" : w.theme,
@@ -211,6 +234,7 @@ function resolveWidget(w, appAppearance, system) {
     background: t.panel,
     foreground,
     accent: t.accent,
+    accentText,
     accentForeground: onAccent(t.accent),
   };
 }
@@ -224,4 +248,5 @@ module.exports = {
   onAccent,
   contrastRatio,
   contrastText,
+  readableColor,
 };
