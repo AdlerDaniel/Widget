@@ -33,14 +33,20 @@ jobs:
           $package = Get-Content package.json -Raw | ConvertFrom-Json
           "value=$($package.version)" >> $env:GITHUB_OUTPUT
 
-      - name: Check whether this version is already published
+           - name: Check whether this version is already published
         id: existing
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $release = gh release view "v${{ steps.version.outputs.value }}" --repo "${{ github.repository }}" --json isDraft 2> $null
-          if ($LASTEXITCODE -eq 0) {
+          $ghExitCode = $LASTEXITCODE
+
+          # gh returns 1 when the release does not exist.
+          # Reset LASTEXITCODE so GitHub Actions does not treat that as step failure.
+          $global:LASTEXITCODE = 0
+
+          if ($ghExitCode -eq 0) {
             $draft = ($release | ConvertFrom-Json).isDraft
             if ($draft) {
               "published=false" >> $env:GITHUB_OUTPUT
@@ -49,7 +55,7 @@ jobs:
             }
           } else {
             "published=false" >> $env:GITHUB_OUTPUT
-          }
+          } 
 
       - name: Install dependencies
         if: steps.existing.outputs.published != 'true'
