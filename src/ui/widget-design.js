@@ -54,6 +54,14 @@ async function endWidgetGesture() {
 function mountWidgetInteractions(w) {
   root.onpointerdown = (e) => {
     root.classList.remove("keyboard-navigation");
+    if (
+      e.button === 0 &&
+      e.target.closest("textarea,input,select") &&
+      !state.update.required
+    ) {
+      act(() => api.focusInput());
+      return;
+    }
     if (e.button !== 0 || w.locked || state.update.required) return;
     const resizing = !!e.target.closest("#resize-grip");
     if (!resizing && e.target.closest("button,textarea,input,select,a")) return;

@@ -258,6 +258,12 @@ async function json(url) {
   return r.json();
 }
 function registerIPC() {
+  ipcMain.handle("focus-input", (e) => {
+    requireUnlocked();
+    const win = BrowserWindow.fromWebContents(e.sender);
+    if (![...windows.values()].includes(win)) throw Error("Нет доступа");
+    desktop.focusInput(win);
+  });
   ipcMain.handle("state", () => state());
   ipcMain.handle("appearance", (e, patch) => {
     requireManager(e);

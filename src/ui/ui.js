@@ -26,6 +26,7 @@ let state,
   weatherError = "",
   weatherBusy = false,
   toastTimer;
+let renderedCalendarDate = null;
 function dateKey(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
@@ -324,10 +325,15 @@ function renderWidget() {
   bindNotes(w);
   const event = document.querySelector("#event");
   if (event)
-    event.oninput = () =>
+    event.oninput = (e) =>
+      !e.isComposing &&
       act(() =>
         api.patch(id, { event: { date: selectedDate, text: event.value } }),
       );
+  if (event)
+    event.addEventListener("compositionend", () =>
+      event.oninput({ isComposing: false }),
+    );
   bind("#prev-month", () => {
     month = new Date(month.getFullYear(), month.getMonth() - 1, 1);
     selectedDate = dateKey(month);
@@ -340,16 +346,20 @@ function renderWidget() {
   });
   root.querySelectorAll("[data-date]").forEach(
     (b) =>
-      (b.onclick = () => {
-        selectedDate = b.dataset.date;
-        renderWidget();
-      }),
+      (b.onclick = () =>
+        act(async () => {
+          selectedDate = b.dataset.date;
+          renderWidget();
+          await api.focusInput();
+          document.querySelector("#event")?.focus();
+        })),
   );
   const replacement = focusId && document.getElementById(focusId);
   if (
     replacement &&
     ["TEXTAREA", "INPUT"].includes(replacement.tagName) &&
-    (w.type !== "note" || renderedNoteId === w.activeNoteId)
+    (w.type !== "note" || renderedNoteId === w.activeNoteId) &&
+    (w.type !== "calendar" || renderedCalendarDate === selectedDate)
   ) {
     if (typing !== null) replacement.value = typing;
     replacement.focus();
@@ -358,6 +368,7 @@ function renderWidget() {
     replacement.scrollTop = scroll;
   }
   renderedNoteId = w.activeNoteId;
+  renderedCalendarDate = selectedDate;
   if (w.type === "clock") tick();
   if (w.type === "weather" && !state.update.required) fetchWeather(w);
 }
@@ -405,6 +416,34 @@ api.onState((s) => {
   applyAppPalette();
   const sliding = document.activeElement?.matches("[data-range]");
   if (id) {
+    const before = previous?.widgets.find((w) => w.id === id),
+      after = s.widgets.find((w) => w.id === id);
+    if (before && after && previous?.update.required === s.update.required) {
+      if (JSON.stringify(before) === JSON.stringify(after)) return;
+      const editor = document.activeElement;
+      if (
+        editor?.matches("#note,#note-title,#event") &&
+        before.activeNoteId === after.activeNoteId
+      ) {
+        const layout = (w) => {
+          const { text, notes, events, ...rest } = w;
+          return { ...rest, eventMarkers: w.eventMarkers || {} };
+        };
+        if (JSON.stringify(layout(before)) === JSON.stringify(layout(after))) {
+          // Keep the live editor: replacing it loses native focus, IME, undo and selection.
+          if (after.type === "calendar")
+            root.querySelectorAll("[data-date]").forEach((b) => {
+              b.classList.toggle("has-event", !!after.events[b.dataset.date]);
+              if (
+                after.events[b.dataset.date] &&
+                ![...b.classList].some((c) => c.startsWith("marker-"))
+              )
+                b.classList.add("marker-dot");
+            });
+          return;
+        }
+      }
+    }
     renderWidget();
   } else if (
     (!editing && !sliding) ||

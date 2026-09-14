@@ -20,6 +20,10 @@ function bindNotes(w) {
     document.activeElement?.blur();
     noteListOpen = false;
     await send(a);
+    if (a.type === "add") {
+      await api.focusInput();
+      document.querySelector("#note")?.focus();
+    }
   };
   bind("#notes-list-toggle", () => {
     document.activeElement?.blur();
@@ -37,11 +41,21 @@ function bindNotes(w) {
   const title = document.querySelector("#note-title"),
     text = document.querySelector("#note");
   if (title)
-    title.oninput = () =>
+    title.oninput = (e) =>
+      !e.isComposing &&
       act(() => send({ type: "update", id: active, title: title.value }));
   if (text)
-    text.oninput = () =>
+    text.oninput = (e) =>
+      !e.isComposing &&
       act(() => send({ type: "update", id: active, text: text.value }));
+  if (title)
+    title.addEventListener("compositionend", () =>
+      title.oninput({ isComposing: false }),
+    );
+  if (text)
+    text.addEventListener("compositionend", () =>
+      text.oninput({ isComposing: false }),
+    );
   bind("#note-save", async () => {
     await send({
       type: "update",

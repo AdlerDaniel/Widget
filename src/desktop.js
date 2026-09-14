@@ -20,6 +20,17 @@ const parent = u.func(
   "void * __stdcall SetParent(void * child, void * parent)",
 );
 const getParent = u.func("void * __stdcall GetParent(void * hwnd)");
+const ancestor = u.func(
+  "void * __stdcall GetAncestor(void * hwnd, uint32 flags)",
+);
+const foreground = u.func("bool __stdcall SetForegroundWindow(void * hwnd)");
+const setFocus = u.func("void * __stdcall SetFocus(void * hwnd)");
+function focusInput(win) {
+  const h = handle(win);
+  foreground(ancestor(h, 2) || h);
+  setFocus(h);
+  win.webContents.focus();
+}
 const valid = u.func("bool __stdcall IsWindow(void * hwnd)");
 const visible = u.func("bool __stdcall IsWindowVisible(void * hwnd)");
 const className = u.func(
@@ -123,4 +134,4 @@ function inspect(win) {
     rect: r,
   };
 }
-module.exports = { attach, move, inspect, pointerTarget };
+module.exports = { attach, move, inspect, pointerTarget, focusInput };

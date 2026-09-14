@@ -145,6 +145,14 @@ module.exports = async ({
       save,
     });
     await require("../tests/native-pointer-smoke.cjs")({ desktop, checks });
+    await require("../tests/input-smoke.cjs")({
+      manager,
+      store,
+      windows,
+      desktop,
+      checks,
+      save,
+    });
     setUpdate({
       status: "available",
       required: true,

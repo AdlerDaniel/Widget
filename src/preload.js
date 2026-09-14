@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld("widgetAPI", {
   resizeStart: (id) => ipcRenderer.invoke("resize-start", id),
   resizeStep: (id, dx, dy) => ipcRenderer.invoke("resize-step", id, dx, dy),
   dragEnd: () => ipcRenderer.invoke("drag-end"),
+  focusInput: () => ipcRenderer.invoke("focus-input"),
   checkUpdates: () => ipcRenderer.invoke("check-updates"),
   downloadUpdate: () => ipcRenderer.invoke("download-update"),
   installUpdate: () => ipcRenderer.invoke("install-update"),
