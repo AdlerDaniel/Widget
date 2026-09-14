@@ -6,6 +6,8 @@ const {
   resolveTheme,
   appearance,
   onAccent,
+  contrastRatio,
+  resolveAppearance,
 } = require("../src/themes");
 const { createWidget, patchWidget } = require("../src/model");
 test("twelve palettes and existing MediaCategorize colors", () => {
@@ -35,6 +37,8 @@ test("legacy widgets preserve colors, content, bounds and opacity", () => {
   assert.equal(r.opacity, 65);
   assert.equal(r.x, -900);
   assert.equal(r.theme, "custom");
+  assert.equal(r.autoTextContrast, true);
+  assert.equal(r.foreground, w.foreground);
 });
 test("inherited themes track app; independent themes do not", () => {
   const w = createWidget("calendar");
@@ -65,5 +69,31 @@ test("appearance limits and invalid theme input are safe", () => {
   assert.equal(
     patchWidget(createWidget("note"), { theme: "nope" }).theme,
     "app",
+  );
+});
+test("automatic text reaches readable contrast and manual colors stay independent", () => {
+  const app = resolveAppearance(
+    { theme: "purple-dark", foreground: "#18121e" },
+    {},
+  );
+  assert.ok(contrastRatio(app.bg, app.text) >= 4.5);
+  assert.ok(contrastRatio(app.panel, app.icon) >= 4.5);
+  const manualApp = resolveAppearance(
+    {
+      theme: "purple-dark",
+      foreground: "#ff22aa",
+      autoTextContrast: false,
+    },
+    {},
+  );
+  assert.equal(manualApp.text, "#ff22aa");
+  const themed = patchWidget(createWidget("clock"), {
+    foreground: "#12ab34",
+    autoTextContrast: false,
+  });
+  assert.equal(themed.theme, "app");
+  assert.equal(
+    resolveWidget(themed, { theme: "brown-dark" }, {}).foreground,
+    "#12ab34",
   );
 });

@@ -96,6 +96,7 @@ function settings() {
   return `<div class="eyebrow">ПАРАМЕТРЫ</div><h1>Удобно каждый день</h1>${appAppearancePanel()}<div class="settings-panel" style="margin-top:25px"><h2>Запуск вместе с Windows</h2><p>Ваши виджеты появятся автоматически после входа в систему. Окно каталога открываться не будет.</p><label class="check"><input id="autostart" type="checkbox" ${state.autostart ? "checked" : ""}>Включать виджеты при входе в Windows</label></div><div class="settings-panel"><div class="row spread"><h2>Версия ${esc(state.version)}</h2><span class="pill">${u.status === "checking" ? "Проверяем…" : u.status === "current" ? "Установлена актуальная версия" : "Обновления"}</span></div><p>${(state.changes || []).map(esc).join("<br>")}</p>${u.status === "error" ? `<p class="status-error">${esc(u.message)}</p>` : ""}<button class="secondary" id="check-update">Проверить обновления</button></div><div class="settings-panel"><h2>Как управлять виджетами</h2><p>Шестерёнка настроек появляется через 2 секунды наведения. Потяните за нижний правый угол, чтобы изменить размер. Перемещайте виджет за заголовок или свободное место. Записи сохраняются автоматически. Пункт «Вернуть виджеты на экран» в трее поможет после смены монитора.</p><p class="small">Погода: Open-Meteo · CC BY 4.0. Фотографии и заметки хранятся на вашем компьютере.</p></div>`;
 }
 function field(label, input, wide = false) {
+  if (label === "Цвет текста") return "";
   return `<label class="field${wide ? " wide" : ""}">${label}${input}</label>`;
 }
 function editPanel() {
@@ -189,7 +190,7 @@ function bindManager() {
       const value =
         el.type === "checkbox"
           ? el.checked
-          : el.type === "number"
+          : el.type === "number" || el.dataset.number === "true"
             ? Number(el.value)
             : el.value;
       act(() => api.patch(editing, { [el.dataset.prop]: value }));
@@ -251,6 +252,12 @@ function weatherDescription(code) {
   if (code <= 86) return ["❄", "Снегопад"];
   return ["ϟ", "Гроза"];
 }
+function calendarMarkerExpired(w, key) {
+  if (!w.markerAutoDeleteDays) return false;
+  const expires = new Date(key + "T23:59:59");
+  expires.setDate(expires.getDate() + w.markerAutoDeleteDays);
+  return new Date() > expires;
+}
 async function fetchWeather(w, force = false) {
   const key = [w.latitude, w.longitude, w.units].join(",");
   if (weatherBusy || (!force && weatherKey === key)) return;
@@ -279,7 +286,7 @@ function widgetContent(w) {
   if (w.type === "weather") {
     const current = weather?.current;
     const [symbol, desc] = weatherDescription(current?.weather_code);
-    return `<div class="widget-content">${current ? `<div class="row spread weather-main"><span class="weather-temp">${Math.round(current.temperature_2m)}°</span><span class="weather-symbol">${["weather-sky", "weather-orbit"].includes(w.style) ? weatherArt(current.weather_code) : symbol}</span></div><div class="weather-desc">${desc}</div><div class="weather-detail"><span>Ощущается ${Math.round(current.apparent_temperature)}°</span><span>${current.relative_humidity_2m}%</span></div><div class="weather-detail" style="border:0"><span>Ветер ${Math.round(current.wind_speed_10m)} км/ч</span><span>${w.units === "fahrenheit" ? "°F" : "°C"}</span></div>` : `<div class="weather-error">${weatherError || "Загружаем погоду…"}${weatherError ? '<button class="secondary" id="retry-weather" style="margin-top:10px">Повторить</button>' : ""}</div>`}<div class="weather-attribution">${weather?.stale ? "Сохранённые данные" : weather ? "Обновлено " + new Date(weather.time).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }) : ""}</div></div>`;
+    return `<div class="widget-content">${current ? `<div class="row spread weather-main"><span class="weather-temp">${Math.round(current.temperature_2m)}°</span><span class="weather-symbol">${["weather-sky", "weather-orbit"].includes(w.style) ? weatherArt(current.weather_code) : symbol}</span></div><div class="weather-desc">${desc}</div><div class="weather-detail"><span>Ощущается ${Math.round(current.apparent_temperature)}°</span><span>${current.relative_humidity_2m}%</span></div><div class="weather-detail" style="border:0"><span>Ветер ${Math.round(current.wind_speed_10m)} км/ч</span><span>${w.units === "fahrenheit" ? "°F" : "°C"}</span></div>` : `<div class="weather-error">${weatherError || "Загружаем погоду…"}${weatherError ? '<button class="secondary" id="retry-weather" style="margin-top:10px">Повторить</button>' : ""}</div>`}</div>`;
   }
   const year = month.getFullYear(),
     m = month.getMonth(),
@@ -290,7 +297,8 @@ function widgetContent(w) {
     (_, i) => {
       const key = dateKey(new Date(year, m, i + 1));
       const marker = w.eventMarkers?.[key] || {};
-      return `<button data-date="${key}" class="day ${key === dateKey(new Date()) ? "today" : ""} ${key === selectedDate ? "selected" : ""} ${w.events[key] ? "has-event marker-" + (marker.style || "dot") : ""}" style="--marker:${esc(marker.color || w.accent)}" aria-label="${key}${w.events[key] ? ", есть заметка" : ""}">${i + 1}</button>`;
+      const visibleMarker = w.events[key] && !calendarMarkerExpired(w, key);
+      return `<button data-date="${key}" class="day ${key === dateKey(new Date()) ? "today" : ""} ${key === selectedDate ? "selected" : ""} ${visibleMarker ? "has-event marker-" + (marker.style || "dot") : ""}" style="--marker:${esc(marker.color || w.accent)}" aria-label="${key}${w.events[key] ? ", есть заметка" : ""}">${i + 1}</button>`;
     },
   ).join(
     "",
@@ -309,7 +317,7 @@ function renderWidget() {
       active?.tagName === "TEXTAREA" || active?.id === "note-title"
         ? active.value
         : null;
-  root.innerHTML = `<article class="widget widget-type-${w.type} widget-style-${w.style || "card"} ${w.showTitle === false ? "no-title" : ""} ${w.showBackground === false ? "no-background" : ""} ${w.locked ? "is-locked" : ""}" style="opacity:${(w.widgetOpacity ?? 100) / 100};--bg:${w.background}${Math.round(
+  root.innerHTML = `<article class="widget widget-type-${w.type} widget-style-${w.style || "card"} ${w.showTitle === false ? "no-title" : ""} ${w.showBackground === false ? "no-background" : ""} ${w.locked ? "is-locked" : ""} ${w.autoTextContrast !== false ? "auto-text" : "manual-text"}" style="opacity:${(w.widgetOpacity ?? 100) / 100};--bg:${w.background}${Math.round(
     w.opacity * 2.55,
   )
     .toString(16)
@@ -433,7 +441,11 @@ api.onState((s) => {
           // Keep the live editor: replacing it loses native focus, IME, undo and selection.
           if (after.type === "calendar")
             root.querySelectorAll("[data-date]").forEach((b) => {
-              b.classList.toggle("has-event", !!after.events[b.dataset.date]);
+              b.classList.toggle(
+                "has-event",
+                !!after.events[b.dataset.date] &&
+                  !calendarMarkerExpired(after, b.dataset.date),
+              );
               if (
                 after.events[b.dataset.date] &&
                 ![...b.classList].some((c) => c.startsWith("marker-"))

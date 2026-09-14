@@ -95,6 +95,27 @@ function onAccent(hex) {
     ? "#111111"
     : "#ffffff";
 }
+function luminance(hex) {
+  const rgb = [1, 3, 5]
+    .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
+}
+function contrastRatio(a, b) {
+  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (light + 0.05) / (dark + 0.05);
+}
+function contrastText(background, preferred = "#ffffff") {
+  if (
+    /^#[a-f0-9]{6}$/i.test(preferred) &&
+    contrastRatio(background, preferred) >= 4.5
+  )
+    return preferred;
+  return contrastRatio(background, "#ffffff") >=
+    contrastRatio(background, "#111111")
+    ? "#ffffff"
+    : "#111111";
+}
 const themes = {};
 for (const [
   family,
@@ -154,33 +175,53 @@ function resolveTheme(id, system = { accent: "#739cff", dark: true }) {
   return themes[id] || themes["purple-dark"];
 }
 function appearance(p = {}) {
+  const theme = validTheme(p.theme) ? p.theme : "purple-dark";
   return {
-    theme: validTheme(p.theme) ? p.theme : "purple-dark",
+    theme,
     opacity: Number.isFinite(p.opacity)
       ? Math.max(35, Math.min(100, p.opacity))
       : 100,
+    autoTextContrast: p.autoTextContrast !== false,
+    foreground: /^#[a-f0-9]{6}$/i.test(p.foreground || "")
+      ? p.foreground
+      : resolveTheme(theme).text,
   };
 }
+function resolveAppearance(p, system) {
+  const a = appearance(p);
+  const palette = resolveTheme(a.theme, system);
+  const text = a.autoTextContrast
+    ? contrastText(palette.bg, palette.text)
+    : a.foreground;
+  return { ...palette, text, icon: contrastText(palette.panel, text) };
+}
 function resolveWidget(w, appAppearance, system) {
-  if (!w.theme || w.theme === "custom")
-    return { ...w, theme: "custom", accentForeground: onAccent(w.accent) };
-  const t = resolveTheme(
-    w.theme === "app" ? appAppearance.theme : w.theme,
-    system,
-  );
+  let t;
+  const custom = !w.theme || w.theme === "custom";
+  if (custom) t = { panel: w.background, text: w.foreground, accent: w.accent };
+  else
+    t = resolveTheme(w.theme === "app" ? appAppearance.theme : w.theme, system);
+  const autoTextContrast = w.autoTextContrast !== false;
+  const foreground =
+    autoTextContrast === false ? w.foreground : contrastText(t.panel, t.text);
   return {
     ...w,
+    theme: custom ? "custom" : w.theme,
+    autoTextContrast,
     background: t.panel,
-    foreground: t.text,
+    foreground,
     accent: t.accent,
-    accentForeground: t.onAccent,
+    accentForeground: onAccent(t.accent),
   };
 }
 module.exports = {
   themes,
   validTheme,
   resolveTheme,
+  resolveAppearance,
   resolveWidget,
   appearance,
   onAccent,
+  contrastRatio,
+  contrastText,
 };

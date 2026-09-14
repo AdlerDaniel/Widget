@@ -1,6 +1,6 @@
 const { test } = require("node:test"),
   assert = require("node:assert/strict");
-const { createWidget, patchWidget } = require("../src/model");
+const { createWidget, patchWidget, markerExpired } = require("../src/model");
 const { normalizeNotes } = require("../src/notes");
 test("legacy text becomes the first note without loss", () => {
   const w = normalizeNotes({
@@ -67,4 +67,43 @@ test("calendar markers are independently styled and survive text edits", () => {
   w = patchWidget(w, { event: { date: "2026-09-15", text: "" } });
   assert.equal(w.eventMarkers["2026-09-15"], undefined);
   assert.equal(w.events["2026-09-16"], "Другой");
+});
+test("calendar marker style and color can be applied to every record", () => {
+  let w = createWidget("calendar");
+  for (const date of ["2026-09-10", "2026-09-11", "2026-09-12"])
+    w = patchWidget(w, { event: { date, text: "План " + date } });
+  w = patchWidget(w, {
+    event: {
+      date: "2026-09-10",
+      markerStyle: "ring",
+      applyStyleToAll: true,
+    },
+  });
+  w = patchWidget(w, {
+    event: {
+      date: "2026-09-11",
+      markerColor: "#123abc",
+      applyColorToAll: true,
+    },
+  });
+  for (const date of Object.keys(w.events))
+    assert.deepEqual(w.eventMarkers[date], {
+      style: "ring",
+      color: "#123abc",
+    });
+});
+test("marker expiry never removes the calendar note", () => {
+  let w = patchWidget(createWidget("calendar"), {
+    event: { date: "2026-09-10", text: "Сохранить эту заметку" },
+  });
+  w = patchWidget(w, { markerAutoDeleteDays: 3 });
+  assert.equal(
+    markerExpired(w, "2026-09-10", new Date("2026-09-14T12:00:00")),
+    true,
+  );
+  assert.equal(w.events["2026-09-10"], "Сохранить эту заметку");
+  assert.equal(
+    markerExpired(w, "2026-09-13", new Date("2026-09-14T12:00:00")),
+    false,
+  );
 });

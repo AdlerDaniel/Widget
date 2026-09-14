@@ -106,7 +106,7 @@ function styleDefaults(style) {
 }
 function resizeBounds(w, dx, dy) {
   const minW = w.type === "calendar" ? 300 : 240,
-    minH = w.type === "calendar" ? 400 : w.type === "weather" ? 260 : 180;
+    minH = w.type === "calendar" ? 400 : w.type === "weather" ? 220 : 180;
   return {
     width: Math.round(Math.max(minW, Math.min(900, w.width + dx))),
     height: Math.round(Math.max(minH, Math.min(1000, w.height + dy))),

@@ -170,6 +170,33 @@ module.exports = async ({
         ),
       });
     }
+    await manager.webContents.executeJavaScript(
+      `document.querySelector('#apply-marker-style-all').click();document.querySelector('#event-marker-style').value='ring';document.querySelector('#event-marker-style').dispatchEvent(new Event('change'));document.querySelector('#apply-marker-color-all').click();document.querySelector('#event-marker-color').value='#7654dc';document.querySelector('#event-marker-color').dispatchEvent(new Event('change'))`,
+    );
+    await wait(150);
+    const markedCalendar = store.data.widgets.find((w) => w.id === cal.id);
+    checks.push({
+      name: "calendar style and color apply to every marking",
+      ok: Object.keys(markedCalendar.events).every(
+        (date) =>
+          markedCalendar.eventMarkers[date]?.style === "ring" &&
+          markedCalendar.eventMarkers[date]?.color === "#7654dc",
+      ),
+    });
+    const expiredDate = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-01`;
+    await manager.webContents.executeJavaScript(
+      `window.widgetAPI.patch('${cal.id}',{event:{date:'${expiredDate}',text:'Старая заметка'},markerAutoDeleteDays:1})`,
+    );
+    await wait(150);
+    const expiringCalendar = store.data.widgets.find((w) => w.id === cal.id);
+    checks.push({
+      name: "expired calendar marking hides without deleting its note",
+      ok:
+        expiringCalendar.events[expiredDate] === "Старая заметка" &&
+        (await cj(
+          `!document.querySelector('[data-date="${expiredDate}"]').classList.contains('has-event')`,
+        )),
+    });
     checks.push({
       name: "calendar formatting controls live only in manager",
       ok: await cj(
@@ -218,6 +245,22 @@ module.exports = async ({
         .get(weather.id)
         .webContents.executeJavaScript(
           `!document.body.textContent.includes('Open-Meteo')`,
+        ),
+    });
+    checks.push({
+      name: "weather widget has no update timestamp",
+      ok: await windows
+        .get(weather.id)
+        .webContents.executeJavaScript(
+          `!document.body.textContent.includes('Обновлено')&&!document.body.textContent.includes('Добавлено')`,
+        ),
+    });
+    checks.push({
+      name: "notes widget has no autosave caption",
+      ok: await windows
+        .get(store.data.widgets.find((w) => w.type === "note").id)
+        .webContents.executeJavaScript(
+          `!document.body.textContent.includes('Автосохранение')`,
         ),
     });
   } finally {

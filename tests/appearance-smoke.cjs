@@ -8,6 +8,29 @@ module.exports = async ({ manager, store, windows, checks, out }) => {
   const original = JSON.parse(JSON.stringify(store.data));
   await js(`window.widgetAPI.patch('${note.id}',{theme:'app'})`);
   await js(`document.querySelector('[data-nav="settings"]').click()`);
+  checks.push({
+    name: "program text contrast is enabled by default",
+    ok:
+      (await js(`document.querySelector('[data-text-auto="app"]').checked`)) &&
+      (await js(
+        `getComputedStyle(document.documentElement).getPropertyValue('--ui-icon').trim()!==''`,
+      )),
+  });
+  await js(
+    `document.querySelector('[data-text-auto="app"]').click();document.querySelector('[data-text-color="app"]').value='#ff22aa';document.querySelector('[data-text-color="app"]').dispatchEvent(new Event('change'))`,
+  );
+  await wait(130);
+  checks.push({
+    name: "program keeps its independently selected text color",
+    ok:
+      store.data.appearance.autoTextContrast === false &&
+      store.data.appearance.foreground === "#ff22aa" &&
+      (await js(
+        `getComputedStyle(document.documentElement).getPropertyValue('--ui-text').trim()==='#ff22aa'`,
+      )),
+  });
+  await js(`document.querySelector('[data-text-auto="app"]').click()`);
+  await wait(130);
   for (const id of Object.keys(require("../src/themes").themes)) {
     await js(`document.querySelector('[data-theme="${id}"]').click()`);
     await wait(130);
@@ -50,6 +73,22 @@ module.exports = async ({ manager, store, windows, checks, out }) => {
   await js(
     `document.querySelector('[data-nav="mine"]').click();document.querySelector('[data-edit="${note.id}"]').click()`,
   );
+  await js(
+    `document.querySelector('[data-text-auto="widget"]').click();document.querySelector('[data-text-color="widget"]').value='#12ab34';document.querySelector('[data-text-color="widget"]').dispatchEvent(new Event('change'))`,
+  );
+  await wait(130);
+  checks.push({
+    name: "widget text color does not detach its theme",
+    ok:
+      store.data.widgets.find((w) => w.id === note.id).theme === "app" &&
+      store.data.widgets.find((w) => w.id === note.id).foreground ===
+        "#12ab34" &&
+      (await win.webContents.executeJavaScript(
+        `getComputedStyle(document.querySelector('.widget')).getPropertyValue('--fg').trim()==='#12ab34'`,
+      )),
+  });
+  await js(`document.querySelector('[data-text-auto="widget"]').click()`);
+  await wait(130);
   for (const [key, val] of [
     ["width", 410],
     ["height", 355],

@@ -66,7 +66,7 @@ function state() {
     widgetStyles: styles,
     appearance,
     system,
-    palette: themeTools.resolveTheme(appearance.theme, system),
+    palette: themeTools.resolveAppearance(appearance, system),
     themes: [
       ...Object.values(themeTools.themes),
       themeTools.resolveTheme("system", system),
@@ -303,7 +303,7 @@ function registerIPC() {
     const old = selected(e, id),
       w = patchWidget(old, patch);
     if (
-      ["background", "foreground", "accent"].some((key) =>
+      ["background", "accent"].some((key) =>
         /^#[a-f0-9]{6}$/i.test(patch[key] || ""),
       )
     ) {
@@ -312,7 +312,7 @@ function registerIPC() {
         themeTools.appearance(store.data.appearance),
         systemColors(),
       );
-      for (const key of ["background", "foreground", "accent"])
+      for (const key of ["background", "accent"])
         if (!/^#[a-f0-9]{6}$/i.test(patch[key] || "")) w[key] = current[key];
     }
     store.data.widgets[store.data.widgets.indexOf(old)] = w;
@@ -363,9 +363,11 @@ function registerIPC() {
     const size = im.getSize();
     fs.writeFileSync(
       dest,
-      (Math.max(size.width, size.height) > 2400
+      (Math.max(size.width, size.height) > 4096
         ? im.resize(
-            size.width > size.height ? { width: 2400 } : { height: 2400 },
+            size.width > size.height
+              ? { width: 4096, quality: "best" }
+              : { height: 4096, quality: "best" },
           )
         : im
       ).toPNG(),

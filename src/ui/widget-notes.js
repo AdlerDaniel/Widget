@@ -10,7 +10,7 @@ function noteName(n) {
 function notesContent(w) {
   const notes = w.notes || [{ id: "first", title: "", text: w.text || "" }],
     n = notes.find((n) => n.id === w.activeNoteId) || notes[0];
-  return `<div class="widget-content notes-content"><div class="notes-toolbar"><button id="notes-list-toggle" aria-expanded="${noteListOpen}" title="Список заметок">${noteListOpen ? "← К записи" : "Список"} <span>${notes.length}</span></button><button id="note-add" title="Добавить заметку" aria-label="Добавить заметку">＋</button></div>${noteListOpen ? `<div class="notes-list" aria-label="Список заметок">${notes.map((item) => `<button class="note-list-item ${item.id === n.id ? "active" : ""}" data-note-id="${esc(item.id)}"><strong>${esc(noteName(item))}</strong><span>${esc(item.text.replace(/\n/g, " ").slice(0, 100) || "Пустая заметка")}</span></button>`).join("")}</div>` : `<input class="note-title-input" id="note-title" maxlength="150" aria-label="Название заметки" placeholder="Название заметки" value="${esc(n.title || "")}"><textarea class="note-area" id="note" placeholder="Запишите важное…" aria-label="Текст заметки">${esc(n.text)}</textarea><div class="note-actions"><button id="note-save">Сохранить</button><span id="note-status" role="status">Автосохранение</span><button id="note-delete" aria-label="Удалить заметку" title="Удалить заметку">Удалить</button></div>`}</div>`;
+  return `<div class="widget-content notes-content"><div class="notes-toolbar"><button id="notes-list-toggle" aria-expanded="${noteListOpen}" title="Список заметок">${noteListOpen ? "← К записи" : "Список"} <span>${notes.length}</span></button><button id="note-add" title="Добавить заметку" aria-label="Добавить заметку">＋</button></div>${noteListOpen ? `<div class="notes-list" aria-label="Список заметок">${notes.map((item) => `<button class="note-list-item ${item.id === n.id ? "active" : ""}" data-note-id="${esc(item.id)}"><strong>${esc(noteName(item))}</strong><span>${esc(item.text.replace(/\n/g, " ").slice(0, 100) || "Пустая заметка")}</span></button>`).join("")}</div>` : `<input class="note-title-input" id="note-title" maxlength="150" aria-label="Название заметки" placeholder="Название заметки" value="${esc(n.title || "")}"><textarea class="note-area" id="note" placeholder="Запишите важное…" aria-label="Текст заметки">${esc(n.text)}</textarea><div class="note-actions"><button id="note-save">Сохранить</button><span id="note-status" role="status"></span><button id="note-delete" aria-label="Удалить заметку" title="Удалить заметку">Удалить</button></div>`}</div>`;
 }
 function bindNotes(w) {
   if (w.type !== "note") return;
@@ -77,12 +77,34 @@ function bindNotes(w) {
   });
 }
 let calendarMarkerDates = {};
+function markerAutoDeleteField(w) {
+  return field(
+    "Автоудаление отметок",
+    '<select data-prop="markerAutoDeleteDays" data-number="true">' +
+      [
+        [0, "Не удалять"],
+        [1, "Через 1 день"],
+        [3, "Через 3 дня"],
+        [7, "Через неделю"],
+        [14, "Через 2 недели"],
+        [30, "Через месяц"],
+        [90, "Через 3 месяца"],
+      ]
+        .map(
+          ([v, t]) =>
+            `<option value="${v}" ${(w.markerAutoDeleteDays || 0) === v ? "selected" : ""}>${t}</option>`,
+        )
+        .join("") +
+      '</select><span class="hint">Удаляется только отметка в сетке календаря. Текст заметки сохраняется.</span>',
+    true,
+  );
+}
 function calendarMarkerPanel(w) {
   const dates = Object.keys(w.events || {})
     .filter((d) => w.events[d])
     .sort();
   if (!dates.length)
-    return '<h2>Отметки дат</h2><p class="hint">Добавьте запись в календаре — здесь появится выбор её отметки и цвета.</p>';
+    return `<h2>Отметки дат</h2><p class="hint">Добавьте запись в календаре — здесь появится выбор её отметки и цвета.</p><div class="form-grid">${markerAutoDeleteField(w)}</div>`;
   const date = dates.includes(calendarMarkerDates[w.id])
     ? calendarMarkerDates[w.id]
     : dates[0];
@@ -135,14 +157,15 @@ function calendarMarkerPanel(w) {
               "</option>",
           )
           .join("") +
-        "</select>",
+        '</select><label class="check marker-apply"><input type="checkbox" id="apply-marker-style-all">Применять для всех отметок</label>',
     ) +
     field(
       "Цвет отметки",
       '<input type="color" id="event-marker-color" value="' +
         esc(marker.color || w.accent) +
-        '">',
+        '"><label class="check marker-apply"><input type="checkbox" id="apply-marker-color-all">Применять для всех отметок</label>',
     ) +
+    markerAutoDeleteField(w) +
     "</div>"
   );
 }
@@ -153,14 +176,29 @@ function bindCalendarMarkers() {
     calendarMarkerDates[editing] = date.value;
     renderManager();
   };
-  for (const [selector, key] of [
-    ["#event-marker-style", "markerStyle"],
-    ["#event-marker-color", "markerColor"],
+  for (const [selector, key, allSelector, allKey] of [
+    [
+      "#event-marker-style",
+      "markerStyle",
+      "#apply-marker-style-all",
+      "applyStyleToAll",
+    ],
+    [
+      "#event-marker-color",
+      "markerColor",
+      "#apply-marker-color-all",
+      "applyColorToAll",
+    ],
   ]) {
     const el = document.querySelector(selector);
-    el.onchange = () =>
+    const all = document.querySelector(allSelector);
+    const apply = () =>
       act(() =>
-        api.patch(editing, { event: { date: date.value, [key]: el.value } }),
+        api.patch(editing, {
+          event: { date: date.value, [key]: el.value, [allKey]: all.checked },
+        }),
       );
+    el.onchange = apply;
+    all.onchange = () => all.checked && apply();
   }
 }

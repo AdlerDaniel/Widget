@@ -24,14 +24,14 @@ function themeChoices(value, scope) {
     .join("")}</div>`;
 }
 function appAppearancePanel() {
-  return `<section class="settings-panel appearance-panel"><div class="eyebrow">ЦВЕТ И НАСТРОЕНИЕ</div><h2>Оформление программы</h2>${themeChoices(state.appearance.theme, "app")}<div class="appearance-divider"></div>${rangeControl("Прозрачность окна", "transparency", 100 - state.appearance.opacity, 0, 65, "%", "app")}<p class="hint">Прозрачность применяется ко всему окну программы. Виджеты настраиваются отдельно.</p><div class="actions"><button class="secondary" id="theme-all">Применить тему ко всем виджетам</button><button class="secondary" id="app-opaque">Сделать окно непрозрачным</button></div><p class="hint">Общая тема не меняет положение, размер, прозрачность и записи виджетов.</p></section>`;
+  return `<section class="settings-panel appearance-panel"><div class="eyebrow">ЦВЕТ И НАСТРОЕНИЕ</div><h2>Оформление программы</h2>${themeChoices(state.appearance.theme, "app")}<div class="appearance-divider"></div><div class="text-contrast-controls"><label class="check"><input type="checkbox" data-text-auto="app" ${state.appearance.autoTextContrast ? "checked" : ""}>Автоматически делать текст и значок контрастными</label><label class="field">Свой цвет текста<input type="color" data-text-color="app" value="${state.appearance.foreground}" ${state.appearance.autoTextContrast ? "disabled" : ""}></label><p class="hint">В автоматическом режиме программа выбирает светлый или тёмный текст по фону. Свой цвет сохраняется при смене темы.</p></div>${rangeControl("Прозрачность окна", "transparency", 100 - state.appearance.opacity, 0, 65, "%", "app")}<p class="hint">Прозрачность применяется ко всему окну программы. Виджеты настраиваются отдельно.</p><div class="actions"><button class="secondary" id="theme-all">Применить тему ко всем виджетам</button><button class="secondary" id="app-opaque">Сделать окно непрозрачным</button></div><p class="hint">Общая тема не меняет положение, размер, прозрачность и записи виджетов.</p></section>`;
 }
 function widgetAppearancePanel(w) {
-  return `<section class="settings-panel appearance-panel"><h2>Тема виджета</h2>${themeChoices(w.theme || "custom", "widget")}</section>`;
+  return `<section class="settings-panel appearance-panel"><h2>Тема виджета</h2>${themeChoices(w.theme || "custom", "widget")}<div class="appearance-divider"></div><div class="text-contrast-controls"><label class="check"><input type="checkbox" data-text-auto="widget" ${w.autoTextContrast !== false ? "checked" : ""}>Автоматически делать текст контрастным</label><label class="field">Свой цвет текста<input type="color" data-text-color="widget" value="${w.foreground}" ${w.autoTextContrast !== false ? "disabled" : ""}></label><p class="hint">Настройка действует только для этого виджета и не меняет выбранную тему.</p></div></section>`;
 }
 function widgetSliders(w) {
   const minWidth = w.type === "calendar" ? 300 : 240,
-    minHeight = w.type === "calendar" ? 400 : w.type === "weather" ? 260 : 180;
+    minHeight = w.type === "calendar" ? 400 : w.type === "weather" ? 220 : 180;
   return `<div class="wide preset-row"><span class="hint">Быстрый размер</span>${["Компактный", "Обычный", "Крупный"].map((n, i) => `<button class="secondary" data-size="${i}">${n}</button>`).join("")}</div>${rangeControl("Ширина", "width", w.width, minWidth, 900, " px")}${rangeControl("Высота", "height", w.height, minHeight, 1000, " px")}${rangeControl("Прозрачность всего виджета", "widgetTransparency", 100 - (w.widgetOpacity ?? 100), 0, 75, "%")}
 ${rangeControl("Прозрачность фона", "transparency", 100 - w.opacity, 0, 75, "%")}${rangeControl("Размер текста", "fontSize", w.fontSize, 12, 30, " px")}${rangeControl("Скругление углов", "radius", w.radius, 0, 40, " px")}<div class="wide hint">Ползунки работают сразу. Для точной настройки используйте стрелки ← и → на клавиатуре. Прозрачность фона не затрагивает текст и фото; прозрачность всего виджета применяется ко всем элементам.</div>`;
 }
@@ -44,6 +44,26 @@ function applyAppPalette() {
   document.documentElement.style.colorScheme = p.mode;
 }
 function bindAppearance() {
+  root.querySelectorAll("[data-text-auto]").forEach((el) => {
+    el.onchange = () =>
+      act(async () => {
+        const patch = { autoTextContrast: el.checked };
+        if (el.dataset.textAuto === "app") await api.appearance(patch);
+        else await api.patch(editing, patch);
+        state = await api.state();
+        renderManager();
+      });
+  });
+  root.querySelectorAll("[data-text-color]").forEach((el) => {
+    el.onchange = () =>
+      act(async () => {
+        const patch = { foreground: el.value, autoTextContrast: false };
+        if (el.dataset.textColor === "app") await api.appearance(patch);
+        else await api.patch(editing, patch);
+        state = await api.state();
+        renderManager();
+      });
+  });
   root.querySelectorAll("[data-theme]").forEach(
     (button) =>
       (button.onclick = () =>
@@ -115,7 +135,7 @@ function bindAppearance() {
         act(async () => {
           const w = state.widgets.find((w) => w.id === editing);
           const base = {
-            weather: [300, 280],
+            weather: [300, 235],
             clock: [320, 230],
             note: [300, 300],
             photo: [300, 340],
