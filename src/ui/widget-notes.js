@@ -62,18 +62,91 @@ function bindNotes(w) {
     return change({ type: "delete", id: active });
   });
 }
-function calendarMarkerControls(w) {
-  const marker = w.eventMarkers?.[selectedDate] || {};
-  return `<div class="event-markers"><select id="event-marker-style" aria-label="Вид отметки даты">${[
-    ["dot", "Точка снизу"],
-    ["ring", "Обводка даты"],
-    ["text", "Цвет цифры"],
-  ]
-    .map(
-      ([v, t]) =>
-        `<option value="${v}" ${(marker.style || "dot") === v ? "selected" : ""}>${t}</option>`,
-    )
-    .join(
-      "",
-    )}</select><label title="Цвет отметки"><span>Цвет</span><input type="color" id="event-marker-color" aria-label="Цвет отметки даты" value="${esc(marker.color || w.accent)}"></label></div>`;
+let calendarMarkerDates = {};
+function calendarMarkerPanel(w) {
+  const dates = Object.keys(w.events || {})
+    .filter((d) => w.events[d])
+    .sort();
+  if (!dates.length)
+    return '<h2>Отметки дат</h2><p class="hint">Добавьте запись в календаре — здесь появится выбор её отметки и цвета.</p>';
+  const date = dates.includes(calendarMarkerDates[w.id])
+    ? calendarMarkerDates[w.id]
+    : dates[0];
+  calendarMarkerDates[w.id] = date;
+  const marker = w.eventMarkers?.[date] || {};
+  return (
+    '<h2>Отметки дат</h2><div class="form-grid">' +
+    field(
+      "Дата заметки",
+      '<select id="marker-date">' +
+        dates
+          .map(
+            (d) =>
+              '<option value="' +
+              d +
+              '" ' +
+              (d === date ? "selected" : "") +
+              ">" +
+              esc(
+                new Date(d + "T12:00:00").toLocaleDateString("ru-RU", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                }),
+              ) +
+              " · " +
+              esc(w.events[d].split("\n")[0].slice(0, 45)) +
+              "</option>",
+          )
+          .join("") +
+        "</select>",
+      true,
+    ) +
+    field(
+      "Вид отметки",
+      '<select id="event-marker-style">' +
+        [
+          ["dot", "Точка снизу"],
+          ["ring", "Обводка даты"],
+          ["text", "Цвет цифры"],
+        ]
+          .map(
+            ([v, t]) =>
+              '<option value="' +
+              v +
+              '" ' +
+              ((marker.style || "dot") === v ? "selected" : "") +
+              ">" +
+              t +
+              "</option>",
+          )
+          .join("") +
+        "</select>",
+    ) +
+    field(
+      "Цвет отметки",
+      '<input type="color" id="event-marker-color" value="' +
+        esc(marker.color || w.accent) +
+        '">',
+    ) +
+    "</div>"
+  );
+}
+function bindCalendarMarkers() {
+  const date = document.querySelector("#marker-date");
+  if (!date) return;
+  date.onchange = () => {
+    calendarMarkerDates[editing] = date.value;
+    renderManager();
+  };
+  for (const [selector, key] of [
+    ["#event-marker-style", "markerStyle"],
+    ["#event-marker-color", "markerColor"],
+  ]) {
+    const el = document.querySelector(selector);
+    el.onchange = () =>
+      act(() =>
+        api.patch(editing, { event: { date: date.value, [key]: el.value } }),
+      );
+  }
 }

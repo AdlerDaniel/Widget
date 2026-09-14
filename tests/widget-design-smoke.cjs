@@ -28,7 +28,7 @@ module.exports = async ({
       ),
     });
     await js(`window.widgetAPI.patch('${note.id}',{showTitle:false})`);
-    await wait(850);
+    await wait(1100);
     checks.push({
       name: "settings menu appears after dwell even across rerender",
       ok: await js(

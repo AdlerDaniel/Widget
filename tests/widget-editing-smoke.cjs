@@ -35,8 +35,19 @@ module.exports = async ({
       path.join(out, "gear-max-radius.png"),
       (await win.webContents.capturePage()).toPNG(),
     );
+    checks.push({
+      name: "rounded resize grip stays visible and can receive pointer input",
+      ok: await js(
+        `(()=>{const g=document.querySelector('#resize-grip').getBoundingClientRect(),w=document.querySelector('.widget').getBoundingClientRect();return g.right<=w.right-12&&g.bottom<=w.bottom-12&&!!document.elementFromPoint((g.left+g.right)/2,(g.top+g.bottom)/2)?.closest('#resize-grip');})()`,
+      ),
+    });
     await js(`window.widgetAPI.patch('${note.id}',{showTitle:false})`);
-    checks.push({name:'hidden heading keeps add note clear of gear',ok:await js(`document.querySelector('#note-add').getBoundingClientRect().right<document.querySelector('#widget-edit').getBoundingClientRect().left`)});
+    checks.push({
+      name: "hidden heading keeps add note clear of gear",
+      ok: await js(
+        `document.querySelector('#note-add').getBoundingClientRect().right<document.querySelector('#widget-edit').getBoundingClientRect().left`,
+      ),
+    });
     await js(`document.querySelector('#widget-edit').focus()`);
     target = null;
     await wait(300);
@@ -123,7 +134,12 @@ module.exports = async ({
       cw = windows.get(cal.id),
       cj = (s) => cw.webContents.executeJavaScript(s);
     await cj(`window.widgetAPI.patch('${cal.id}',{showTitle:false})`);
-    checks.push({name:'hidden heading keeps calendar navigation clear of gear',ok:await cj(`document.querySelector('#next-month').getBoundingClientRect().right<document.querySelector('#widget-edit').getBoundingClientRect().left`)});
+    checks.push({
+      name: "hidden heading keeps calendar navigation clear of gear",
+      ok: await cj(
+        `document.querySelector('#next-month').getBoundingClientRect().right<document.querySelector('#widget-edit').getBoundingClientRect().left`,
+      ),
+    });
     for (const [day, style, color] of [
       [15, "dot", "#ffa344"],
       [16, "ring", "#4dd8b4"],
@@ -133,11 +149,17 @@ module.exports = async ({
         `document.querySelectorAll('[data-date]')[${day - 1}].click();document.querySelector('#event').value='План на день';document.querySelector('#event').dispatchEvent(new Event('input'))`,
       );
       await wait(100);
-      await cj(
+      const date = await cj(
+        `document.querySelectorAll('[data-date]')[${day - 1}].dataset.date`,
+      );
+      await manager.webContents.executeJavaScript(
+        `view='mine';editing='${cal.id}';calendarMarkerDates[editing]='${date}';renderManager()`,
+      );
+      await manager.webContents.executeJavaScript(
         `document.querySelector('#event-marker-style').value='${style}';document.querySelector('#event-marker-style').dispatchEvent(new Event('change'))`,
       );
       await wait(100);
-      await cj(
+      await manager.webContents.executeJavaScript(
         `document.querySelector('#event-marker-color').value='${color}';document.querySelector('#event-marker-color').dispatchEvent(new Event('change'))`,
       );
       await wait(100);
@@ -148,11 +170,48 @@ module.exports = async ({
         ),
       });
     }
+    checks.push({
+      name: "calendar formatting controls live only in manager",
+      ok: await cj(
+        `!document.querySelector('#event-marker-style')&&!document.querySelector('#event-marker-color')`,
+      ),
+    });
+    await cj(`document.querySelectorAll('[data-date]')[15].click()`);
+    checks.push({
+      name: "selected ring date has no rectangle",
+      ok: await cj(
+        `(()=>{const d=document.querySelectorAll('[data-date]')[15],s=getComputedStyle(d);return s.backgroundColor==='rgba(0, 0, 0, 0)'&&s.outlineStyle==='none';})()`,
+      ),
+    });
+    await manager.webContents.executeJavaScript(
+      `document.querySelector('#event-marker-style').scrollIntoView({block:'center'})`,
+    );
+    fs.writeFileSync(
+      path.join(out, "calendar-marker-settings.png"),
+      (await manager.webContents.capturePage()).toPNG(),
+    );
     fs.writeFileSync(
       path.join(out, "calendar-markers.png"),
       (await cw.webContents.capturePage()).toPNG(),
     );
     const weather = store.data.widgets.find((w) => w.type === "weather");
+    const photo = store.data.widgets.find((w) => w.type === "photo"),
+      pw = windows.get(photo.id);
+    await pw.webContents.executeJavaScript(
+      `window.widgetAPI.patch('${photo.id}',{style:'photo-round',radius:40})`,
+    );
+    target = photo.id;
+    await wait(200);
+    checks.push({
+      name: "round photo resize grip fits entirely inside the circular image",
+      ok: await pw.webContents.executeJavaScript(
+        `(()=>{const g=document.querySelector('#resize-grip').getBoundingClientRect(),p=document.querySelector('.photo-image').getBoundingClientRect(),cx=(p.left+p.right)/2,cy=(p.top+p.bottom)/2;return [[g.left,g.top],[g.right,g.top],[g.left,g.bottom],[g.right,g.bottom]].every(([x,y])=>Math.hypot(x-cx,y-cy)<p.width/2);})()`,
+      ),
+    });
+    fs.writeFileSync(
+      path.join(out, "round-photo-resize.png"),
+      (await pw.webContents.capturePage()).toPNG(),
+    );
     checks.push({
       name: "weather widget has no provider footer label",
       ok: await windows

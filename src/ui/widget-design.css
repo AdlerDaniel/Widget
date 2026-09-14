@@ -186,38 +186,20 @@
 .day.has-event.marker-text.selected {
   color: var(--marker);
 }
-.event-markers {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 6px;
-  flex-shrink: 0;
-}
-.event-markers select {
-  font-size: 10px;
-  min-width: 0;
-  flex: 1;
-  padding: 4px 5px;
-  color: var(--fg);
-  background: var(--bg);
-  border: 1px solid color-mix(in srgb, var(--fg) 20%, transparent);
-  border-radius: 5px;
-}
-.event-markers label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin: 0;
-  opacity: 1;
-  font-size: 10px;
-}
-.event-markers input[type="color"] {
-  width: 26px;
-  height: 23px;
-  min-height: 0;
-  padding: 0;
-  border: 0;
+.day.has-event.marker-ring,
+.day.has-event.marker-ring:hover,
+.day.has-event.marker-ring.selected,
+.day.has-event.marker-ring.today {
   background: transparent;
+  outline: none;
+  box-shadow: none;
+}
+.day.has-event.marker-ring.selected:after {
+  border-width: 3px;
+}
+.day.has-event.marker-ring:focus-visible:after {
+  outline: 1px dashed var(--fg);
+  outline-offset: 2px;
 }
 .widget.no-title .widget-header {
   display: none;
@@ -236,8 +218,8 @@
 }
 .resize-grip {
   position: absolute;
-  bottom: 2px;
-  right: 2px;
+  bottom: max(2px, calc(var(--radius) * 0.3));
+  right: max(2px, calc(var(--radius) * 0.3));
   width: 24px;
   height: 24px;
   z-index: 12;
@@ -258,8 +240,12 @@
   height: 11px;
   border-right: 2px solid var(--accent);
   border-bottom: 2px solid var(--accent);
-  border-radius: 0 0 3px 0;
+  border-radius: 0 0 clamp(3px, calc(var(--radius) * 0.4), 11px) 0;
   filter: drop-shadow(0 1px 1px #000c);
+}
+.widget-style-photo-round .resize-grip {
+  bottom: calc(50% - min(100cqw, 100cqh) * 0.353553 + 8px);
+  right: calc(50% - min(100cqw, 100cqh) * 0.353553 + 8px);
 }
 .widget-hovered .resize-grip,
 .widget-gesturing .resize-grip,
