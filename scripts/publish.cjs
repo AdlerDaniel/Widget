@@ -10,6 +10,7 @@ function command(exe, args, capture = false) {
     encoding: "utf8",
     stdio: capture ? "pipe" : "inherit",
     windowsHide: true,
+    timeout: 300000,
   });
   if (r.status !== 0)
     throw Error(exe + " failed" + (capture ? ": " + r.stderr : ""));
@@ -67,6 +68,29 @@ command("gh", [
   repo,
   "--clobber",
 ]);
+// A successful CLI exit is insufficient if an upload was interrupted externally.
+const uploaded = JSON.parse(
+  command(
+    "gh",
+    ["release", "view", tag, "--repo", repo, "--json", "assets"],
+    true,
+  ),
+).assets;
+for (const file of [asset, asset + ".blockmap", "dist/latest.yml"]) {
+  const remote = uploaded.find((a) => a.name === path.basename(file));
+  const data = fs.readFileSync(file);
+  const digest =
+    "sha256:" + crypto.createHash("sha256").update(data).digest("hex");
+  if (
+    !remote ||
+    remote.state !== "uploaded" ||
+    remote.size !== data.length ||
+    remote.digest !== digest
+  )
+    throw Error(
+      "Release asset is missing or incomplete: " + path.basename(file),
+    );
+}
 command("gh", [
   "release",
   "edit",
