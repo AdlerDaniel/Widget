@@ -19,6 +19,7 @@ const Store = require("./store");
 const { styles, resizeBounds } = require("./widget-styles");
 const { normalizeNotes } = require("./notes");
 const { newer } = require("./version");
+const { quoteForDate } = require("./quotes");
 const themeTools = require("./themes");
 function systemColors() {
   return {
@@ -258,6 +259,9 @@ async function json(url) {
   return r.json();
 }
 function registerIPC() {
+  ipcMain.on("daily-quote", (event, date) => {
+    event.returnValue = quoteForDate(date);
+  });
   ipcMain.handle("focus-input", (e) => {
     requireUnlocked();
     const win = BrowserWindow.fromWebContents(e.sender);

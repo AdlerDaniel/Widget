@@ -77,6 +77,13 @@ const extra = {
       description: "Выделенный месяц и заметка дня",
     },
   ],
+  quote: [
+    {
+      id: "quote-landscape",
+      name: "Пейзаж",
+      description: "Большая цитата и мягкий силуэт пейзажа",
+    },
+  ],
 };
 const styles = Object.fromEntries(
   Object.keys(extra).map((type) => [type, [...common, ...extra[type]]]),
@@ -101,12 +108,20 @@ function styleDefaults(style) {
       "clock-dial",
       "weather-orbit",
       "weather-compact",
+      "quote-landscape",
     ].includes(style),
   };
 }
 function resizeBounds(w, dx, dy) {
-  const minW = w.type === "calendar" ? 300 : 240,
-    minH = w.type === "calendar" ? 400 : w.type === "weather" ? 220 : 180;
+  const minW = w.type === "calendar" ? 300 : w.type === "quote" ? 260 : 240,
+    minH =
+      w.type === "calendar"
+        ? 400
+        : w.type === "weather"
+          ? 220
+          : w.type === "quote"
+            ? 190
+            : 180;
   return {
     width: Math.round(Math.max(minW, Math.min(900, w.width + dx))),
     height: Math.round(Math.max(minH, Math.min(1000, w.height + dy))),

@@ -8,6 +8,7 @@ const names = {
   note: "Заметки",
   photo: "Моё фото",
   calendar: "Календарь",
+  quote: "Цитата дня",
 };
 const descriptions = {
   weather: "Температура и погода в вашем городе.",
@@ -15,6 +16,7 @@ const descriptions = {
   note: "Идеи и важное — всегда перед глазами.",
   photo: "Любимые моменты на рабочем столе.",
   calendar: "Планы и заметки для каждого дня.",
+  quote: "Новая мысль и немного вдохновения каждый день.",
 };
 let state,
   view = "catalog",
@@ -26,7 +28,8 @@ let state,
   weatherError = "",
   weatherBusy = false,
   toastTimer;
-let renderedCalendarDate = null;
+let renderedCalendarDate = null,
+  renderedQuoteDate = null;
 function dateKey(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
@@ -74,10 +77,12 @@ function preview(t) {
     photo: "",
     calendar:
       '<span class="small">Сентябрь</span><div class="mini-days">П В С Ч П С В<br>7 8 9 10 11 12 13<br>14 15 16 17 18 19 20</div>',
+    quote:
+      '<strong>Спокойствие<br>тоже прогресс.</strong><span class="quote-preview-sun"></span><span class="quote-preview-hill quote-preview-hill-far"></span><span class="quote-preview-hill quote-preview-hill-near"></span>',
   }[t];
 }
 function catalog() {
-  return `<div class="eyebrow">ВАШЕ ЛИЧНОЕ ПРОСТРАНСТВО</div><div class="intro"><div><h1>Рабочий стол. По-вашему.</h1><p>Маленькие виджеты для того, что важно.</p></div><span class="pill">5 виджетов</span></div><div class="hero"><div><h2>Всё нужное — рядом</h2><p>Добавьте виджет, выберите свой стиль и перетащите<br>его в удобное место на рабочем столе.</p></div><div class="hero-mark" aria-hidden="true"><span></span><span></span><span></span></div></div><div class="section-title"><h2>Коллекция виджетов</h2><span class="muted small">Можно добавить несколько одинаковых</span></div><div class="grid">${Object.keys(
+  return `<div class="eyebrow">ВАШЕ ЛИЧНОЕ ПРОСТРАНСТВО</div><div class="intro"><div><h1>Рабочий стол. По-вашему.</h1><p>Маленькие виджеты для того, что важно.</p></div><span class="pill">${Object.keys(names).length} виджетов</span></div><div class="hero"><div><h2>Всё нужное — рядом</h2><p>Добавьте виджет, выберите свой стиль и перетащите<br>его в удобное место на рабочем столе.</p></div><div class="hero-mark" aria-hidden="true"><span></span><span></span><span></span></div></div><div class="section-title"><h2>Коллекция виджетов</h2><span class="muted small">Можно добавить несколько одинаковых</span></div><div class="grid">${Object.keys(
     names,
   )
     .map(
@@ -107,7 +112,7 @@ function editPanel() {
   }
   const input = (key, type = "text", extra = "") =>
     `<input data-prop="${key}" type="${type}" value="${esc(w[key])}" ${extra}>`;
-  return `<button class="back" id="back">← Мои виджеты</button><div class="intro"><div><div class="eyebrow">ИНДИВИДУАЛЬНЫЙ СТИЛЬ</div><h1>${names[w.type]}</h1><p>Изменения сразу появятся на рабочем столе.</p></div></div>${widgetDesignPanel(w)}${widgetAppearancePanel(w)}<div class="settings-panel"><div class="editor-preview" id="editor-preview" style="background:${w.background};color:${w.foreground};border-radius:${w.radius}px"><strong>${esc(w.title || names[w.type])}</strong><span style="color:${w.accent}">Aa · 123</span></div><div class="form-grid">${field("Название", input("title", "text", `placeholder="${names[w.type]}"`), true)}${field("Цвет фона", input("background", "color"))}${field("Цвет текста", input("foreground", "color"))}${field("Акцент", input("accent", "color"))}${widgetSliders(w)}</div><label class="check"><input data-prop="locked" type="checkbox" ${w.locked ? "checked" : ""}>Закрепить положение</label></div><div class="settings-panel">${w.type === "weather" ? `<h2>Ваш город</h2><p class="small">Сейчас: <span id="current-city">${esc(w.city)}</span></p><div class="row"><input id="city-search" placeholder="Название города" style="flex:1"><button class="secondary" id="search-city">Найти</button></div><div class="city-results" id="city-results"></div><label class="field" style="margin-top:18px">Единицы температуры<select data-prop="units"><option value="celsius" ${w.units === "celsius" ? "selected" : ""}>Градусы Цельсия · °C</option><option value="fahrenheit" ${w.units === "fahrenheit" ? "selected" : ""}>Градусы Фаренгейта · °F</option></select></label>` : w.type === "clock" ? `<h2>Отображение времени</h2><label class="check"><input data-prop="seconds" type="checkbox" ${w.seconds ? "checked" : ""}>Показывать секунды</label><label class="check"><input data-prop="hour12" type="checkbox" ${w.hour12 ? "checked" : ""}>12-часовой формат</label>` : w.type === "photo" ? `<h2>Любимый кадр</h2><p class="small">PNG, JPG или WebP, до 30 МБ. Копия фото сохраняется в приложении.</p><button class="primary" id="choose-photo">Выбрать фотографию</button><label class="field" style="margin-top:18px">Размещение<select data-prop="fit"><option value="cover" ${w.fit === "cover" ? "selected" : ""}>Заполнить виджет</option><option value="contain" ${w.fit === "contain" ? "selected" : ""}>Показать фото целиком</option></select></label>` : w.type === "note" ? `<h2>Текст заметки</h2><textarea data-prop="text" rows="7" style="width:100%" placeholder="Запишите важное…">${esc(w.text)}</textarea><p class="hint">Также можно писать прямо в виджете.</p>` : `<h2>Планы на каждый день</h2><p>Выберите день в календаре на рабочем столе и напишите заметку под ним.</p>${calendarMarkerPanel(w)}`}</div><button class="danger" id="remove-widget">Удалить виджет</button><span class="hint" style="margin-left:15px">Будут удалены и его записи</span>`;
+  return `<button class="back" id="back">← Мои виджеты</button><div class="intro"><div><div class="eyebrow">ИНДИВИДУАЛЬНЫЙ СТИЛЬ</div><h1>${names[w.type]}</h1><p>Изменения сразу появятся на рабочем столе.</p></div></div>${widgetDesignPanel(w)}${widgetAppearancePanel(w)}<div class="settings-panel"><div class="editor-preview" id="editor-preview" style="background:${w.background};color:${w.foreground};border-radius:${w.radius}px"><strong>${esc(w.title || names[w.type])}</strong><span style="color:${w.accent}">Aa · 123</span></div><div class="form-grid">${field("Название", input("title", "text", `placeholder="${names[w.type]}"`), true)}${field("Цвет фона", input("background", "color"))}${field("Цвет текста", input("foreground", "color"))}${field("Акцент", input("accent", "color"))}${widgetSliders(w)}</div><label class="check"><input data-prop="locked" type="checkbox" ${w.locked ? "checked" : ""}>Закрепить положение</label></div><div class="settings-panel">${w.type === "weather" ? `<h2>Ваш город</h2><p class="small">Сейчас: <span id="current-city">${esc(w.city)}</span></p><div class="row"><input id="city-search" placeholder="Название города" style="flex:1"><button class="secondary" id="search-city">Найти</button></div><div class="city-results" id="city-results"></div><label class="field" style="margin-top:18px">Единицы температуры<select data-prop="units"><option value="celsius" ${w.units === "celsius" ? "selected" : ""}>Градусы Цельсия · °C</option><option value="fahrenheit" ${w.units === "fahrenheit" ? "selected" : ""}>Градусы Фаренгейта · °F</option></select></label>` : w.type === "clock" ? `<h2>Отображение времени</h2><label class="check"><input data-prop="seconds" type="checkbox" ${w.seconds ? "checked" : ""}>Показывать секунды</label><label class="check"><input data-prop="hour12" type="checkbox" ${w.hour12 ? "checked" : ""}>12-часовой формат</label>` : w.type === "photo" ? `<h2>Любимый кадр</h2><p class="small">PNG, JPG или WebP, до 30 МБ. Копия фото сохраняется в приложении.</p><button class="primary" id="choose-photo">Выбрать фотографию</button><label class="field" style="margin-top:18px">Размещение<select data-prop="fit"><option value="cover" ${w.fit === "cover" ? "selected" : ""}>Заполнить виджет</option><option value="contain" ${w.fit === "contain" ? "selected" : ""}>Показать фото целиком</option></select></label>` : w.type === "note" ? `<h2>Текст заметки</h2><textarea data-prop="text" rows="7" style="width:100%" placeholder="Запишите важное…">${esc(w.text)}</textarea><p class="hint">Также можно писать прямо в виджете.</p>` : w.type === "quote" ? `<h2>Цитата дня</h2><p>Новая фраза появляется автоматически каждый день. Интернет для этого не требуется.</p>` : w.type === "calendar" ? `<h2>Планы на каждый день</h2><p>Выберите день в календаре на рабочем столе и напишите заметку под ним.</p>${calendarMarkerPanel(w)}` : `<h2>Настройки виджета</h2>`}</div><button class="danger" id="remove-widget">Удалить виджет</button><span class="hint" style="margin-left:15px">Будут удалены и его записи</span>`;
 }
 function updateOverlay() {
   const u = state.update;
@@ -292,21 +297,36 @@ function widgetContent(w) {
     const [symbol, desc] = weatherDescription(current?.weather_code);
     return `<div class="widget-content">${current ? `<div class="row spread weather-main"><span class="weather-temp">${Math.round(current.temperature_2m)}°</span><span class="weather-symbol">${["weather-sky", "weather-orbit"].includes(w.style) ? weatherArt(current.weather_code) : symbol}</span></div><div class="weather-desc">${desc}</div><div class="weather-detail"><span>Ощущается ${Math.round(current.apparent_temperature)}°</span><span>${current.relative_humidity_2m}%</span></div><div class="weather-detail" style="border:0"><span>Ветер ${Math.round(current.wind_speed_10m)} км/ч</span><span>${w.units === "fahrenheit" ? "°F" : "°C"}</span></div>` : `<div class="weather-error">${weatherError || "Загружаем погоду…"}${weatherError ? '<button class="secondary" id="retry-weather" style="margin-top:10px">Повторить</button>' : ""}</div>`}</div>`;
   }
-  const year = month.getFullYear(),
-    m = month.getMonth(),
-    count = new Date(year, m + 1, 0).getDate(),
-    start = (new Date(year, m, 1).getDay() + 6) % 7;
-  return `<div class="widget-content"><div class="calendar-nav"><button id="prev-month" aria-label="Предыдущий месяц">‹</button><span>${esc(month.toLocaleDateString("ru-RU", { month: "long", year: "numeric" }))}</span><button id="next-month" aria-label="Следующий месяц">›</button></div><div class="weekdays">${["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС"].map((d) => `<span>${d}</span>`).join("")}</div><div class="days">${"<span></span>".repeat(start)}${Array.from(
-    { length: count },
-    (_, i) => {
-      const key = dateKey(new Date(year, m, i + 1));
-      const marker = w.eventMarkers?.[key] || {};
-      const visibleMarker = w.events[key] && !calendarMarkerExpired(w, key);
-      return `<button data-date="${key}" class="day ${key === dateKey(new Date()) ? "today" : ""} ${key === selectedDate ? "selected" : ""} ${visibleMarker ? "has-event marker-" + (marker.style || "dot") : ""}" style="--marker:${esc(marker.color || w.accent)}" aria-label="${key}${w.events[key] ? ", есть заметка" : ""}">${i + 1}</button>`;
-    },
-  ).join(
-    "",
-  )}</div><div class="calendar-note"><label for="event">${esc(new Date(selectedDate + "T12:00:00").toLocaleDateString("ru-RU", { day: "numeric", month: "long" }))} · заметка</label><textarea id="event" placeholder="Что запланируем?">${esc(w.events[selectedDate] || "")}</textarea></div></div>`;
+  if (w.type === "quote") {
+    const currentDate = dateKey(new Date()),
+      quote = api.dailyQuote(currentDate),
+      lengthClass =
+        quote.length <= 55
+          ? "quote-short"
+          : quote.length <= 85
+            ? "quote-medium"
+            : "quote-long";
+    renderedQuoteDate = currentDate;
+    return `<div class="widget-content quote-content"><div class="quote-copy"><div class="quote-text ${lengthClass}">${esc(quote)}</div><span class="quote-line" aria-hidden="true"></span></div><svg class="quote-landscape" viewBox="0 0 400 170" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><circle class="quote-sun" cx="315" cy="50" r="24"/><path class="quote-hill-far" d="M-20 131L55 72l51 43 65-68 70 73 57-55 122 88v37H-20Z"/><path class="quote-hill-middle" d="M-25 151L63 94l72 50 80-68 71 61 58-37 81 54v36H-25Z"/><path class="quote-hill-near" d="M-30 169Q55 116 137 153T273 140T430 142V190H-30Z"/></svg></div>`;
+  }
+  if (w.type === "calendar") {
+    const year = month.getFullYear(),
+      m = month.getMonth(),
+      count = new Date(year, m + 1, 0).getDate(),
+      start = (new Date(year, m, 1).getDay() + 6) % 7;
+    return `<div class="widget-content"><div class="calendar-nav"><button id="prev-month" aria-label="Предыдущий месяц">‹</button><span>${esc(month.toLocaleDateString("ru-RU", { month: "long", year: "numeric" }))}</span><button id="next-month" aria-label="Следующий месяц">›</button></div><div class="weekdays">${["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС"].map((d) => `<span>${d}</span>`).join("")}</div><div class="days">${"<span></span>".repeat(start)}${Array.from(
+      { length: count },
+      (_, i) => {
+        const key = dateKey(new Date(year, m, i + 1));
+        const marker = w.eventMarkers?.[key] || {};
+        const visibleMarker = w.events[key] && !calendarMarkerExpired(w, key);
+        return `<button data-date="${key}" class="day ${key === dateKey(new Date()) ? "today" : ""} ${key === selectedDate ? "selected" : ""} ${visibleMarker ? "has-event marker-" + (marker.style || "dot") : ""}" style="--marker:${esc(marker.color || w.accent)}" aria-label="${key}${w.events[key] ? ", есть заметка" : ""}">${i + 1}</button>`;
+      },
+    ).join(
+      "",
+    )}</div><div class="calendar-note"><label for="event">${esc(new Date(selectedDate + "T12:00:00").toLocaleDateString("ru-RU", { day: "numeric", month: "long" }))} · заметка</label><textarea id="event" placeholder="Что запланируем?">${esc(w.events[selectedDate] || "")}</textarea></div></div>`;
+  }
+  return '<div class="widget-content"></div>';
 }
 function renderWidget() {
   const w = state.widgets.find((w) => w.id === id);
@@ -506,6 +526,14 @@ api.onEdit((widgetId) => {
 api.state().then((s) => {
   state = s;
   id ? renderWidget() : renderManager();
+  if (id && s.widgets.find((w) => w.id === id)?.type === "quote")
+    setInterval(() => {
+      const nextDate = dateKey(new Date());
+      if (nextDate !== renderedQuoteDate) {
+        renderedQuoteDate = nextDate;
+        renderWidget();
+      }
+    }, 60000);
   if (s.recovered && !id)
     toast("Настройки восстановлены. Проверьте свои виджеты.");
 });

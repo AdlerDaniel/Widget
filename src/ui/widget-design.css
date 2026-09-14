@@ -473,6 +473,84 @@
 .widget-style-calendar-planner .day {
   height: 32px;
 }
+.widget-style-quote-landscape {
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--accent) 7%, var(--bg)),
+    var(--bg)
+  );
+}
+.quote-content {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.quote-copy {
+  position: relative;
+  z-index: 2;
+  min-height: 0;
+  height: 100%;
+  padding: clamp(3px, 2cqh, 12px) clamp(36px, 11cqw, 46px)
+    clamp(8px, 5cqh, 24px) 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+}
+.quote-text {
+  max-width: 100%;
+  color: var(--fg);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.35em, 7cqw, 2.65em);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.quote-medium {
+  font-size: clamp(1em, 5.8cqw, 2.05em);
+}
+.quote-long {
+  font-size: clamp(0.78em, 4.6cqw, 1.55em);
+  line-height: 1.1;
+}
+.quote-short {
+  font-weight: 500;
+}
+.quote-line {
+  display: block;
+  width: clamp(30px, 14cqw, 58px);
+  height: 2px;
+  flex: 0 0 2px;
+  margin-top: clamp(7px, 4cqh, 16px);
+  border-radius: 999px;
+  background: var(--accent-text);
+  opacity: 0.72;
+}
+.quote-landscape {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 45%;
+  min-height: 58px;
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 28%, #000 100%);
+}
+.quote-sun {
+  fill: color-mix(in srgb, var(--accent) 20%, var(--bg));
+}
+.quote-hill-far {
+  fill: color-mix(in srgb, var(--accent) 12%, var(--bg));
+}
+.quote-hill-middle {
+  fill: color-mix(in srgb, var(--accent) 23%, var(--bg));
+}
+.quote-hill-near {
+  fill: color-mix(in srgb, var(--accent) 38%, var(--bg));
+}
 .weather-art {
   width: 130px;
   height: 110px;
@@ -665,6 +743,31 @@
 .style-mini-note-sticky i,
 .style-mini-note-sticky b {
   background: var(--ui-bg);
+}
+.style-mini-quote-landscape {
+  overflow: hidden;
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--ui-accent) 10%, var(--ui-panel)),
+    var(--ui-panel)
+  );
+}
+.style-mini-quote-landscape i {
+  width: 43%;
+  height: 4px;
+  left: 12%;
+  top: 12px;
+  box-shadow: 0 8px 0 color-mix(in srgb, var(--ui-text) 65%, transparent);
+}
+.style-mini-quote-landscape b {
+  width: 70%;
+  height: 27px;
+  left: 34%;
+  top: 35px;
+  border-radius: 50% 50% 0 0;
+  background: color-mix(in srgb, var(--ui-accent) 42%, var(--ui-panel));
+  box-shadow: -48px 8px 0
+    color-mix(in srgb, var(--ui-accent) 22%, var(--ui-panel));
 }
 @media (prefers-reduced-motion: reduce) {
   .widget-menu {

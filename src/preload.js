@@ -1,5 +1,6 @@
 const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("widgetAPI", {
+  dailyQuote: (date) => ipcRenderer.sendSync("daily-quote", date),
   state: () => ipcRenderer.invoke("state"),
   appearance: (p) => ipcRenderer.invoke("appearance", p),
   themeAll: () => ipcRenderer.invoke("theme-all"),

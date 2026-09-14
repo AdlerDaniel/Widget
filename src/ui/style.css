@@ -302,6 +302,53 @@ p {
 .preview.calendar {
   background: #243d39;
 }
+.preview.quote {
+  justify-content: flex-start;
+  background: linear-gradient(155deg, #3d3152, #29233c);
+  color: #f5effc;
+  padding: 22px 20px;
+}
+.preview.quote strong {
+  position: relative;
+  z-index: 3;
+  max-width: 82%;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 25px;
+  line-height: 1.05;
+  letter-spacing: -0.6px;
+  font-weight: 500;
+}
+.quote-preview-sun {
+  position: absolute;
+  z-index: 1;
+  right: 22px;
+  bottom: 49px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #9a82c2;
+  opacity: 0.5;
+}
+.quote-preview-hill {
+  position: absolute;
+  left: -12%;
+  bottom: -35px;
+  width: 78%;
+  height: 86px;
+  border-radius: 50% 56% 0 0;
+  transform: rotate(5deg);
+  background: #57466f;
+}
+.quote-preview-hill-far {
+  left: 35%;
+  bottom: -28px;
+  width: 82%;
+  background: #493b61;
+}
+.quote-preview-hill-near {
+  z-index: 2;
+  background: #66517f;
+}
 .preview strong {
   font-size: 35px;
   font-weight: 500;

@@ -5,6 +5,24 @@ const fs = require("node:fs"),
   path = require("node:path");
 const { createWidget, patchWidget, clampBounds } = require("../src/model");
 const Store = require("../src/store");
+test("quote widgets use their dedicated safe defaults", () => {
+  const w = createWidget("quote");
+  assert.equal(w.type, "quote");
+  assert.deepEqual([w.width, w.height], [340, 250]);
+  assert.equal(w.style, "quote-landscape");
+  assert.equal(w.showTitle, false);
+  assert.equal(w.showBackground, true);
+  assert.equal(w.fontSize, 18);
+  const patched = patchWidget(w, {
+    id: "replacement",
+    type: "calendar",
+    width: 1,
+    height: 1,
+  });
+  assert.equal(patched.id, w.id);
+  assert.equal(patched.type, "quote");
+  assert.deepEqual([patched.width, patched.height], [260, 190]);
+});
 test("calendar records survive other edits and can be deleted independently", () => {
   let w = createWidget("calendar");
   w = patchWidget(w, { event: { date: "2026-09-13", text: "План" } });

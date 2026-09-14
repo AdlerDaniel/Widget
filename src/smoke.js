@@ -30,14 +30,14 @@ module.exports = async ({
         name: "restore after process restart",
         ok:
           store.data.widgets.some((w) => w.text === "Заметка сохранена ✓") &&
-          windows.size === 5,
+          windows.size === store.data.widgets.length,
       });
     }
     checks.push({
       name: "add through catalog",
       ok: store.data.widgets.length > 0,
     });
-    for (const type of ["clock", "weather", "photo", "calendar"])
+    for (const type of ["clock", "weather", "photo", "calendar", "quote"])
       if (!store.data.widgets.find((w) => w.type === type)) {
         const w = createWidget(type);
         if (type === "calendar") w.events["2026-09-13"] = "Тестовая запись";
@@ -82,6 +82,12 @@ module.exports = async ({
       `document.querySelector('[data-nav="catalog"]').click()`,
     );
     await wait(200);
+    checks.push({
+      name: "catalog exposes all six widget types without a hardcoded count",
+      ok: await manager.webContents.executeJavaScript(
+        `document.querySelectorAll('[data-add]').length===6&&!!document.querySelector('[data-add="quote"]')&&[...document.querySelectorAll('.pill')].some(el=>el.textContent.trim()==='6 виджетов')`,
+      ),
+    });
     fs.writeFileSync(
       path.join(out, "catalog.png"),
       (await manager.webContents.capturePage()).toPNG(),
@@ -240,7 +246,7 @@ module.exports = async ({
     manager.close();
     checks.push({
       name: "closing catalog retains widgets",
-      ok: !manager.isVisible() && windows.size === 5,
+      ok: !manager.isVisible() && windows.size === store.data.widgets.length,
     });
     checks.push({
       name: "no runtime errors",

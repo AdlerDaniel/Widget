@@ -151,6 +151,76 @@ module.exports = async ({
           );
       }
     }
+    const quote = store.data.widgets.find((w) => w.type === "quote"),
+      qwin = windows.get(quote.id),
+      quoteScenarios = [
+        {
+          name: "minimum-dark",
+          patch: {
+            width: 260,
+            height: 190,
+            theme: "purple-dark",
+            showTitle: false,
+            showBackground: true,
+          },
+        },
+        {
+          name: "medium-light-transparent-title",
+          patch: {
+            width: 340,
+            height: 250,
+            theme: "purple-light",
+            showTitle: true,
+            showBackground: false,
+          },
+        },
+        {
+          name: "large-custom",
+          patch: {
+            width: 520,
+            height: 360,
+            background: "#edf2f7",
+            accent: "#315f86",
+            showTitle: false,
+            showBackground: true,
+          },
+        },
+      ];
+    for (const scenario of quoteScenarios) {
+      await manager.webContents.executeJavaScript(
+        `window.widgetAPI.patch('${quote.id}',${JSON.stringify(scenario.patch)})`,
+      );
+      await wait(120);
+      const quoteGeometry = await qwin.webContents.executeJavaScript(
+        `(()=>{const widget=document.querySelector('.widget'),content=document.querySelector('.quote-content'),text=document.querySelector('.quote-text'),menu=document.querySelector('#widget-edit'),wr=widget.getBoundingClientRect(),tr=text.getBoundingClientRect(),mr=menu.getBoundingClientRect();return {hasLandscape:!!document.querySelector('.quote-landscape'),scrollWidth:content.scrollWidth,clientWidth:content.clientWidth,scrollHeight:content.scrollHeight,clientHeight:content.clientHeight,widget:{left:wr.left,top:wr.top,right:wr.right,bottom:wr.bottom},text:{left:tr.left,top:tr.top,right:tr.right,bottom:tr.bottom},menu:{left:mr.left,top:mr.top,right:mr.right,bottom:mr.bottom}};})()`,
+      );
+      checks.push({
+        name:
+          "quote " + scenario.name + " stays inside its card and clear of gear",
+        ok:
+          quoteGeometry.hasLandscape &&
+          quoteGeometry.scrollWidth <= quoteGeometry.clientWidth &&
+          quoteGeometry.scrollHeight <= quoteGeometry.clientHeight &&
+          quoteGeometry.text.left >= quoteGeometry.widget.left &&
+          quoteGeometry.text.right <= quoteGeometry.menu.left &&
+          quoteGeometry.text.top >= quoteGeometry.widget.top &&
+          quoteGeometry.text.bottom <= quoteGeometry.widget.bottom,
+        details: quoteGeometry,
+      });
+      fs.writeFileSync(
+        path.join(out, "quote-" + scenario.name + ".png"),
+        (await qwin.webContents.capturePage()).toPNG(),
+      );
+    }
+    const calendar = store.data.widgets.find((w) => w.type === "calendar");
+    checks.push({
+      name: "calendar still uses its explicit calendar renderer",
+      ok: await windows
+        .get(calendar.id)
+        .webContents.executeJavaScript(
+          `!!document.querySelector('.days')&&!!document.querySelector('#event')&&!document.querySelector('.quote-content')`,
+        ),
+    });
     await manager.webContents.executeJavaScript(
       `window.widgetAPI.patch('${photo.id}',{style:'photo-round'})`,
     );

@@ -3,13 +3,14 @@ const crypto = require("node:crypto");
 const { normalizeNotes, patchNotes } = require("./notes");
 const { validTheme } = require("./themes");
 const { validStyle, styleDefaults } = require("./widget-styles");
-const TYPES = ["weather", "clock", "note", "photo", "calendar"];
+const TYPES = ["weather", "clock", "note", "photo", "calendar", "quote"];
 const sizes = {
   weather: [300, 235],
   clock: [320, 230],
   note: [300, 300],
   photo: [300, 340],
   calendar: [350, 440],
+  quote: [340, 250],
 };
 function createWidget(type, offset = 0) {
   if (!TYPES.includes(type)) throw Error("Неизвестный виджет");
@@ -27,7 +28,7 @@ function createWidget(type, offset = 0) {
     theme: "app",
     opacity: 96,
     widgetOpacity: 100,
-    fontSize: 16,
+    fontSize: type === "quote" ? 18 : 16,
     radius: 24,
     title: "",
     text: "",
@@ -40,8 +41,8 @@ function createWidget(type, offset = 0) {
     hour12: false,
     seconds: true,
     locked: false,
-    style: "card",
-    showTitle: true,
+    style: type === "quote" ? "quote-landscape" : "card",
+    showTitle: type !== "quote",
     showBackground: true,
     events: {},
     eventMarkers: {},
@@ -132,6 +133,10 @@ function patchWidget(widget, patch) {
     out.height = Math.max(400, out.height);
   }
   if (out.type === "weather") out.height = Math.max(220, out.height);
+  if (out.type === "quote") {
+    out.width = Math.max(260, out.width);
+    out.height = Math.max(190, out.height);
+  }
   return patchNotes(out, patch);
 }
 function markerExpired(widget, date, now = new Date()) {
