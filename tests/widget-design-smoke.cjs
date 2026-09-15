@@ -153,6 +153,7 @@ module.exports = async ({
     }
     const quote = store.data.widgets.find((w) => w.type === "quote"),
       qwin = windows.get(quote.id),
+      quoteFontSizes = {},
       quoteScenarios = [
         {
           name: "minimum-dark",
@@ -163,6 +164,7 @@ module.exports = async ({
             showTitle: false,
             showBackground: true,
           },
+          checkTextLandscapeGap: true,
         },
         {
           name: "medium-light-transparent-title",
@@ -179,11 +181,82 @@ module.exports = async ({
           patch: {
             width: 520,
             height: 360,
+            theme: "custom",
             background: "#edf2f7",
             accent: "#315f86",
             showTitle: false,
             showBackground: true,
           },
+        },
+        {
+          name: "dark-low-contrast-accent",
+          patch: {
+            width: 500,
+            height: 300,
+            theme: "custom",
+            background: "#1d2331",
+            accent: "#242a38",
+            showTitle: false,
+            showBackground: true,
+          },
+          checkLandscapeContrast: true,
+        },
+        {
+          name: "size-260x190",
+          patch: {
+            width: 260,
+            height: 190,
+            theme: "purple-dark",
+            showTitle: false,
+            showBackground: true,
+          },
+          shortText: "Сила рождается в движении.",
+        },
+        {
+          name: "size-340x250",
+          patch: {
+            width: 340,
+            height: 250,
+            theme: "purple-light",
+            showTitle: false,
+            showBackground: true,
+          },
+          shortText: "Сила рождается в движении.",
+        },
+        {
+          name: "size-500x300-bright-accent",
+          patch: {
+            width: 500,
+            height: 300,
+            theme: "custom",
+            background: "#f3f6fb",
+            accent: "#315f86",
+            showTitle: false,
+            showBackground: true,
+          },
+          shortText: "Сила рождается в движении.",
+        },
+        {
+          name: "size-900x700",
+          patch: {
+            width: 900,
+            height: 700,
+            theme: "purple-dark",
+            showTitle: false,
+            showBackground: true,
+          },
+          shortText: "Сила рождается в движении.",
+        },
+        {
+          name: "size-900x190",
+          patch: {
+            width: 900,
+            height: 190,
+            theme: "purple-light",
+            showTitle: false,
+            showBackground: true,
+          },
+          shortText: "Сила рождается в движении.",
         },
       ];
     for (const scenario of quoteScenarios) {
@@ -191,14 +264,20 @@ module.exports = async ({
         `window.widgetAPI.patch('${quote.id}',${JSON.stringify(scenario.patch)})`,
       );
       await wait(120);
+      if (scenario.shortText)
+        await qwin.webContents.executeJavaScript(
+          `(()=>{const text=document.querySelector('.quote-text');text.className='quote-text quote-short';text.textContent=${JSON.stringify(scenario.shortText)};})()`,
+        );
       const quoteGeometry = await qwin.webContents.executeJavaScript(
-        `(()=>{const widget=document.querySelector('.widget'),content=document.querySelector('.quote-content'),text=document.querySelector('.quote-text'),menu=document.querySelector('#widget-edit'),wr=widget.getBoundingClientRect(),tr=text.getBoundingClientRect(),mr=menu.getBoundingClientRect();return {hasLandscape:!!document.querySelector('.quote-landscape'),scrollWidth:content.scrollWidth,clientWidth:content.clientWidth,scrollHeight:content.scrollHeight,clientHeight:content.clientHeight,widget:{left:wr.left,top:wr.top,right:wr.right,bottom:wr.bottom},text:{left:tr.left,top:tr.top,right:tr.right,bottom:tr.bottom},menu:{left:mr.left,top:mr.top,right:mr.right,bottom:mr.bottom}};})()`,
+        `(()=>{const widget=document.querySelector('.widget'),content=document.querySelector('.quote-content'),text=document.querySelector('.quote-text'),menu=document.querySelector('#widget-edit'),landscape=document.querySelector('.quote-landscape'),wr=widget.getBoundingClientRect(),tr=text.getBoundingClientRect(),mr=menu.getBoundingClientRect(),lr=landscape.getBoundingClientRect(),pixel=color=>{const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');canvas.width=canvas.height=1;ctx.fillStyle='#000';ctx.fillStyle=color;ctx.fillRect(0,0,1,1);return [...ctx.getImageData(0,0,1,1).data.slice(0,3)]},luminance=rgb=>{const c=rgb.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4});return .2126*c[0]+.7152*c[1]+.0722*c[2]},contrast=(a,b)=>{const x=luminance(pixel(a)),y=luminance(pixel(b));return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)},bg=getComputedStyle(widget).getPropertyValue('--bg').trim(),fills={far:getComputedStyle(document.querySelector('.quote-hill-far')).fill,middle:getComputedStyle(document.querySelector('.quote-hill-middle')).fill,near:getComputedStyle(document.querySelector('.quote-hill-near')).fill};return {hasLandscape:!!landscape,scrollWidth:content.scrollWidth,clientWidth:content.clientWidth,scrollHeight:content.scrollHeight,clientHeight:content.clientHeight,fontSize:parseFloat(getComputedStyle(text).fontSize),widget:{left:wr.left,top:wr.top,right:wr.right,bottom:wr.bottom},text:{left:tr.left,top:tr.top,right:tr.right,bottom:tr.bottom},menu:{left:mr.left,top:mr.top,right:mr.right,bottom:mr.bottom},landscape:{left:lr.left,top:lr.top,right:lr.right,bottom:lr.bottom,height:lr.height},fills,landscapeContrast:{far:contrast(fills.far,bg),middle:contrast(fills.middle,bg),near:contrast(fills.near,bg)}};})()`,
       );
+      quoteFontSizes[scenario.name] = quoteGeometry.fontSize;
       checks.push({
         name:
           "quote " + scenario.name + " stays inside its card and clear of gear",
         ok:
           quoteGeometry.hasLandscape &&
+          quoteGeometry.landscape.height > 0 &&
           quoteGeometry.scrollWidth <= quoteGeometry.clientWidth &&
           quoteGeometry.scrollHeight <= quoteGeometry.clientHeight &&
           quoteGeometry.text.left >= quoteGeometry.widget.left &&
@@ -207,11 +286,59 @@ module.exports = async ({
           quoteGeometry.text.bottom <= quoteGeometry.widget.bottom,
         details: quoteGeometry,
       });
+      if (scenario.checkLandscapeContrast)
+        checks.push({
+          name:
+            "quote " +
+            scenario.name +
+            " keeps progressively visible hills against its background",
+          ok:
+            quoteGeometry.landscapeContrast.far > 1.05 &&
+            quoteGeometry.landscapeContrast.middle >
+              quoteGeometry.landscapeContrast.far + 0.05 &&
+            quoteGeometry.landscapeContrast.near >
+              quoteGeometry.landscapeContrast.middle + 0.05,
+          details: {
+            fills: quoteGeometry.fills,
+            contrast: quoteGeometry.landscapeContrast,
+          },
+        });
+      if (scenario.checkTextLandscapeGap)
+        checks.push({
+          name:
+            "quote " +
+            scenario.name +
+            " keeps its last text line clear of the visible landscape",
+          ok:
+            quoteGeometry.text.bottom + 4 <=
+            quoteGeometry.landscape.top +
+              quoteGeometry.landscape.height * 0.28,
+          details: {
+            textBottom: quoteGeometry.text.bottom,
+            landscapeFadeEnd:
+              quoteGeometry.landscape.top +
+              quoteGeometry.landscape.height * 0.28,
+          },
+        });
       fs.writeFileSync(
         path.join(out, "quote-" + scenario.name + ".png"),
         (await qwin.webContents.capturePage()).toPNG(),
       );
     }
+    checks.push({
+      name: "quote short text grows substantially in a large tall widget",
+      ok:
+        quoteFontSizes["size-900x700"] >
+        quoteFontSizes["size-340x250"] * 1.8,
+      details: quoteFontSizes,
+    });
+    checks.push({
+      name: "quote short text respects limited height in a wide short widget",
+      ok:
+        quoteFontSizes["size-900x190"] <
+        quoteFontSizes["size-900x700"] * 0.65,
+      details: quoteFontSizes,
+    });
     const calendar = store.data.widgets.find((w) => w.type === "calendar");
     checks.push({
       name: "calendar still uses its explicit calendar renderer",
