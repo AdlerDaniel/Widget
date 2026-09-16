@@ -1,6 +1,6 @@
 {
   "name": "desktop-widget",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "Персональные виджеты рабочего стола Windows",
   "productName": "My Widget",
   "private": true,
