@@ -3,15 +3,8 @@ const crypto = require("node:crypto");
 const { normalizeNotes, patchNotes } = require("./notes");
 const { validTheme } = require("./themes");
 const { validStyle, styleDefaults } = require("./widget-styles");
-const TYPES = ["weather", "clock", "note", "photo", "calendar", "quote"];
-const sizes = {
-  weather: [300, 235],
-  clock: [320, 230],
-  note: [300, 300],
-  photo: [300, 340],
-  calendar: [350, 440],
-  quote: [340, 250],
-};
+const { WIDGET_META } = require("./widget-meta");
+const TYPES = Object.keys(WIDGET_META);
 function createWidget(type, offset = 0) {
   if (!TYPES.includes(type)) throw Error("Неизвестный виджет");
   return normalizeNotes({
@@ -19,8 +12,8 @@ function createWidget(type, offset = 0) {
     type,
     x: 80 + offset * 28,
     y: 80 + offset * 28,
-    width: sizes[type][0],
-    height: sizes[type][1],
+    width: WIDGET_META[type].defaultSize[0],
+    height: WIDGET_META[type].defaultSize[1],
     background: "#202839",
     foreground: "#f4f6fc",
     autoTextContrast: true,
@@ -67,8 +60,6 @@ function patchWidget(widget, patch) {
   if (/^#[0-9a-f]{6}$/i.test(patch.foreground || ""))
     out.foreground = patch.foreground;
   for (const [key, min, max] of [
-    ["width", 240, 900],
-    ["height", 180, 1000],
     ["opacity", 25, 100],
     ["widgetOpacity", 25, 100],
     ["fontSize", 12, 30],
@@ -78,6 +69,14 @@ function patchWidget(widget, patch) {
   ])
     if (Number.isFinite(patch[key]))
       out[key] = Math.min(max, Math.max(min, patch[key]));
+  const { minSize, maxSize } = WIDGET_META[widget.type];
+  for (const [key, index] of [
+    ["width", 0],
+    ["height", 1],
+  ]) {
+    const value = Number.isFinite(patch[key]) ? patch[key] : out[key];
+    out[key] = Math.min(maxSize[index], Math.max(minSize[index], value));
+  }
   for (const key of [
     "locked",
     "seconds",
@@ -127,15 +126,6 @@ function patchWidget(widget, patch) {
           ...out.eventMarkers[target],
           color: patch.event.markerColor,
         };
-  }
-  if (out.type === "calendar") {
-    out.width = Math.max(300, out.width);
-    out.height = Math.max(400, out.height);
-  }
-  if (out.type === "weather") out.height = Math.max(220, out.height);
-  if (out.type === "quote") {
-    out.width = Math.max(260, out.width);
-    out.height = Math.max(190, out.height);
   }
   return patchNotes(out, patch);
 }

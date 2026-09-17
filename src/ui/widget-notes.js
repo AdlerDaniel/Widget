@@ -16,17 +16,37 @@ function bindNotes(w) {
   if (w.type !== "note") return;
   const active = w.activeNoteId || "first";
   const send = (a) => api.patch(id, { noteAction: a });
+  const flushCurrent = () =>
+    title && text
+      ? api.patch(id, {
+          noteAction: {
+            type: "update",
+            id: active,
+            title: title.value,
+            text: text.value,
+          },
+          saveNow: true,
+        })
+      : Promise.resolve();
   const change = async (a) => {
     document.activeElement?.blur();
+    await flushCurrent();
     noteListOpen = false;
     await send(a);
+    if (
+      a.type === "select" &&
+      a.id === active &&
+      document.querySelector(".notes-list")
+    )
+      renderWidget();
     if (a.type === "add") {
       await api.focusInput();
       document.querySelector("#note")?.focus();
     }
   };
-  bind("#notes-list-toggle", () => {
+  bind("#notes-list-toggle", async () => {
     document.activeElement?.blur();
+    await flushCurrent();
     noteListOpen = !noteListOpen;
     renderWidget();
   });
@@ -56,13 +76,10 @@ function bindNotes(w) {
     text.addEventListener("compositionend", () =>
       text.oninput({ isComposing: false }),
     );
+  for (const editor of [title, text].filter(Boolean))
+    editor.addEventListener("blur", () => act(flushCurrent));
   bind("#note-save", async () => {
-    await send({
-      type: "update",
-      id: active,
-      title: title.value,
-      text: text.value,
-    });
+    await flushCurrent();
     const status = document.querySelector("#note-status");
     if (status) status.textContent = "Сохранено ✓";
   });
@@ -79,10 +96,10 @@ function bindNotes(w) {
 let calendarMarkerDates = {};
 function markerAutoDeleteField(w) {
   return field(
-    "Автоудаление отметок",
+    "Автоскрытие отметок",
     '<select data-prop="markerAutoDeleteDays" data-number="true">' +
       [
-        [0, "Не удалять"],
+        [0, "Не скрывать"],
         [1, "Через 1 день"],
         [3, "Через 3 дня"],
         [7, "Через неделю"],
@@ -95,7 +112,7 @@ function markerAutoDeleteField(w) {
             `<option value="${v}" ${(w.markerAutoDeleteDays || 0) === v ? "selected" : ""}>${t}</option>`,
         )
         .join("") +
-      '</select><span class="hint">Удаляется только отметка в сетке календаря. Текст заметки сохраняется.</span>',
+      '</select><span class="hint">После срока отметка скрывается в сетке календаря, но не удаляется. Если отключить срок, она появится снова. Текст заметки сохраняется.</span>',
     true,
   );
 }

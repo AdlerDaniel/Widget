@@ -30,9 +30,8 @@ function widgetAppearancePanel(w) {
   return `<section class="settings-panel appearance-panel"><h2>Тема виджета</h2>${themeChoices(w.theme || "custom", "widget")}<div class="appearance-divider"></div><div class="text-contrast-controls"><label class="check"><input type="checkbox" data-text-auto="widget" ${w.autoTextContrast !== false ? "checked" : ""}>Автоматически делать текст контрастным</label><label class="field">Свой цвет текста<input type="color" data-text-color="widget" value="${w.foreground}" ${w.autoTextContrast !== false ? "disabled" : ""}></label><p class="hint">Настройка действует только для этого виджета и не меняет выбранную тему.</p></div></section>`;
 }
 function widgetSliders(w) {
-  const minWidth = w.type === "calendar" ? 300 : 240,
-    minHeight = w.type === "calendar" ? 400 : w.type === "weather" ? 220 : 180;
-  return `<div class="wide preset-row"><span class="hint">Быстрый размер</span>${["Компактный", "Обычный", "Крупный"].map((n, i) => `<button class="secondary" data-size="${i}">${n}</button>`).join("")}</div>${rangeControl("Ширина", "width", w.width, minWidth, 900, " px")}${rangeControl("Высота", "height", w.height, minHeight, 1000, " px")}${rangeControl("Прозрачность всего виджета", "widgetTransparency", 100 - (w.widgetOpacity ?? 100), 0, 75, "%")}
+  const { minSize, maxSize } = state.widgetMeta[w.type];
+  return `<div class="wide preset-row"><span class="hint">Быстрый размер</span>${["Компактный", "Обычный", "Крупный"].map((n, i) => `<button class="secondary" data-size="${i}">${n}</button>`).join("")}</div>${rangeControl("Ширина", "width", w.width, minSize[0], maxSize[0], " px")}${rangeControl("Высота", "height", w.height, minSize[1], maxSize[1], " px")}${rangeControl("Прозрачность всего виджета", "widgetTransparency", 100 - (w.widgetOpacity ?? 100), 0, 75, "%")}
 ${rangeControl("Прозрачность фона", "transparency", 100 - w.opacity, 0, 75, "%")}${rangeControl("Размер текста", "fontSize", w.fontSize, 12, 30, " px")}${rangeControl("Скругление углов", "radius", w.radius, 0, 40, " px")}<div class="wide hint">Ползунки работают сразу. Для точной настройки используйте стрелки ← и → на клавиатуре. Прозрачность фона не затрагивает текст и фото; прозрачность всего виджета применяется ко всем элементам.</div>`;
 }
 function applyAppPalette() {
@@ -134,13 +133,7 @@ function bindAppearance() {
       (el.onclick = () =>
         act(async () => {
           const w = state.widgets.find((w) => w.id === editing);
-          const base = {
-            weather: [300, 235],
-            clock: [320, 230],
-            note: [300, 300],
-            photo: [300, 340],
-            calendar: [350, 440],
-          }[w.type];
+          const base = state.widgetMeta[w.type].defaultSize;
           const factor = [0.85, 1, 1.3][Number(el.dataset.size)];
           await api.patch(editing, {
             width: Math.round(base[0] * factor),

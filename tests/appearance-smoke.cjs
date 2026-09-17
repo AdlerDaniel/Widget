@@ -72,9 +72,8 @@ module.exports = async ({ manager, store, windows, checks, out }) => {
       )),
   });
   await js(`window.widgetAPI.appearance({opacity:100})`);
-  await js(
-    `document.querySelector('[data-nav="mine"]').click();document.querySelector('[data-edit="${note.id}"]').click()`,
-  );
+  await js(`document.querySelector('[data-nav="mine"]').onclick()`);
+  await js(`document.querySelector('[data-edit="${note.id}"]').click()`);
   await js(
     `document.querySelector('[data-text-auto="widget"]').click();document.querySelector('[data-text-color="widget"]').value='#12ab34';document.querySelector('[data-text-color="widget"]').dispatchEvent(new Event('change'))`,
   );
@@ -194,6 +193,37 @@ module.exports = async ({ manager, store, windows, checks, out }) => {
     ok:
       persisted.appearance.theme === "system" &&
       persisted.widgets.every((w) => w.theme === "app"),
+  });
+  const quote = store.data.widgets.find((w) => w.type === "quote");
+  await js(`document.querySelector('[data-nav="mine"]').onclick()`);
+  await js(`document.querySelector('[data-edit="${quote.id}"]').click()`);
+  checks.push({
+    name: "quote size sliders use the model minimums",
+    ok: await js(
+      `document.querySelector('[data-range="width"]').min==='260'&&document.querySelector('[data-range="height"]').min==='190'`,
+    ),
+  });
+  for (const [index, width, height] of [
+    [0, 289, 213],
+    [1, 340, 250],
+    [2, 442, 325],
+  ]) {
+    await js(`document.querySelector('[data-size="${index}"]').click()`);
+    await wait(120);
+    const actual = store.data.widgets.find((w) => w.id === quote.id);
+    checks.push({
+      name: "quote quick size " + index + " applies without error",
+      ok: actual.width === width && actual.height === height,
+    });
+  }
+  const calendar = store.data.widgets.find((w) => w.type === "calendar");
+  await js(`document.querySelector('[data-nav="mine"]').onclick()`);
+  await js(`document.querySelector('[data-edit="${calendar.id}"]').click()`);
+  checks.push({
+    name: "calendar labels its reversible marker expiry as auto-hide",
+    ok: await js(
+      `document.querySelector('.main').textContent.includes('Автоскрытие отметок')&&!document.querySelector('.main').textContent.includes('Автоудаление отметок')`,
+    ),
   });
   store.data = original;
   store.save();

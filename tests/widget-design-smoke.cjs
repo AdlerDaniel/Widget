@@ -151,6 +151,49 @@ module.exports = async ({
           );
       }
     }
+    const weatherWidget = store.data.widgets.find((w) => w.type === "weather");
+    const weatherWindow = windows.get(weatherWidget.id);
+    const staleGeometry = await weatherWindow.webContents.executeJavaScript(
+      `(()=>{const w=state.widgets.find(w=>w.id==='${weatherWidget.id}');weatherKey=[w.latitude,w.longitude,w.units].join(',');weather={current:{temperature_2m:18,apparent_temperature:17,relative_humidity_2m:60,wind_speed_10m:5,weather_code:0},stale:true};renderWidget();const label=document.querySelector('.weather-stale'),widget=document.querySelector('.widget'),content=document.querySelector('.widget-content');return {hasLabel:!!label&&label.textContent==='Показаны последние данные',labelBottom:label?.getBoundingClientRect().bottom,widgetBottom:widget.getBoundingClientRect().bottom,scrollHeight:content.scrollHeight,clientHeight:content.clientHeight}})()`,
+    );
+    await wait(100);
+    fs.writeFileSync(
+      path.join(out, "weather-stale.png"),
+      (await weatherWindow.webContents.capturePage()).toPNG(),
+    );
+    checks.push({
+      name: "offline weather cache is labeled and fresh weather is not",
+      ok:
+        staleGeometry.hasLabel &&
+        staleGeometry.labelBottom <= staleGeometry.widgetBottom &&
+        staleGeometry.scrollHeight <= staleGeometry.clientHeight &&
+        (await weatherWindow.webContents.executeJavaScript(
+          `weather={...weather,stale:false};renderWidget();!document.querySelector('.weather-stale')`,
+        )),
+      details: staleGeometry,
+    });
+    for (const style of [
+      "card",
+      "weather-sky",
+      "weather-orbit",
+      "weather-compact",
+    ]) {
+      await manager.webContents.executeJavaScript(
+        `window.widgetAPI.patch('${weatherWidget.id}',{style:'${style}',width:300,height:220})`,
+      );
+      await wait(90);
+      const geometry = await weatherWindow.webContents.executeJavaScript(
+        `(()=>{const w=state.widgets.find(w=>w.id==='${weatherWidget.id}');weatherKey=[w.latitude,w.longitude,w.units].join(',');weather={current:{temperature_2m:18,apparent_temperature:17,relative_humidity_2m:60,wind_speed_10m:5,weather_code:0},stale:true};renderWidget();const label=document.querySelector('.weather-stale'),widget=document.querySelector('.widget'),content=document.querySelector('.widget-content'),staleScrollHeight=content.scrollHeight,labelBottom=label.getBoundingClientRect().bottom,labelRight=label.getBoundingClientRect().right,widgetBottom=widget.getBoundingClientRect().bottom,widgetRight=widget.getBoundingClientRect().right;weather={...weather,stale:false};renderWidget();return {labelBottom,labelRight,widgetBottom,widgetRight,staleScrollHeight,freshScrollHeight:document.querySelector('.widget-content').scrollHeight}})()`,
+      );
+      checks.push({
+        name: "stale weather label fits minimum " + style + " widget",
+        ok:
+          geometry.labelBottom <= geometry.widgetBottom &&
+          geometry.labelRight <= geometry.widgetRight &&
+          geometry.staleScrollHeight <= geometry.freshScrollHeight,
+        details: geometry,
+      });
+    }
     const quote = store.data.widgets.find((w) => w.type === "quote"),
       qwin = windows.get(quote.id),
       quoteFontSizes = {},
@@ -311,8 +354,7 @@ module.exports = async ({
             " keeps its last text line clear of the visible landscape",
           ok:
             quoteGeometry.text.bottom + 4 <=
-            quoteGeometry.landscape.top +
-              quoteGeometry.landscape.height * 0.28,
+            quoteGeometry.landscape.top + quoteGeometry.landscape.height * 0.28,
           details: {
             textBottom: quoteGeometry.text.bottom,
             landscapeFadeEnd:
@@ -327,16 +369,13 @@ module.exports = async ({
     }
     checks.push({
       name: "quote short text grows substantially in a large tall widget",
-      ok:
-        quoteFontSizes["size-900x700"] >
-        quoteFontSizes["size-340x250"] * 1.8,
+      ok: quoteFontSizes["size-900x700"] > quoteFontSizes["size-340x250"] * 1.8,
       details: quoteFontSizes,
     });
     checks.push({
       name: "quote short text respects limited height in a wide short widget",
       ok:
-        quoteFontSizes["size-900x190"] <
-        quoteFontSizes["size-900x700"] * 0.65,
+        quoteFontSizes["size-900x190"] < quoteFontSizes["size-900x700"] * 0.65,
       details: quoteFontSizes,
     });
     const calendar = store.data.widgets.find((w) => w.type === "calendar");
@@ -392,7 +431,10 @@ module.exports = async ({
         ),
     });
     await manager.webContents.executeJavaScript(
-      `document.querySelector('[data-nav="mine"]').click();document.querySelector('[data-edit="${photo.id}"]').click()`,
+      `document.querySelector('[data-nav="mine"]').onclick()`,
+    );
+    await manager.webContents.executeJavaScript(
+      `document.querySelector('[data-edit="${photo.id}"]').click()`,
     );
     await wait(100);
     fs.writeFileSync(

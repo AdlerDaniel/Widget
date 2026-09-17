@@ -1,3 +1,5 @@
+const { WIDGET_META } = require("./widget-meta");
+
 const common = [
   {
     id: "card",
@@ -113,18 +115,12 @@ function styleDefaults(style) {
   };
 }
 function resizeBounds(w, dx, dy) {
-  const minW = w.type === "calendar" ? 300 : w.type === "quote" ? 260 : 240,
-    minH =
-      w.type === "calendar"
-        ? 400
-        : w.type === "weather"
-          ? 220
-          : w.type === "quote"
-            ? 190
-            : 180;
+  const { minSize, maxSize } = WIDGET_META[w.type];
   return {
-    width: Math.round(Math.max(minW, Math.min(900, w.width + dx))),
-    height: Math.round(Math.max(minH, Math.min(1000, w.height + dy))),
+    width: Math.round(Math.max(minSize[0], Math.min(maxSize[0], w.width + dx))),
+    height: Math.round(
+      Math.max(minSize[1], Math.min(maxSize[1], w.height + dy)),
+    ),
   };
 }
 module.exports = { styles, validStyle, styleDefaults, resizeBounds };

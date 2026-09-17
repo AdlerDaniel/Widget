@@ -13,7 +13,13 @@ module.exports = async ({
     original = JSON.parse(JSON.stringify(store.data));
   const note = store.data.widgets.find((w) => w.type === "note"),
     win = windows.get(note.id),
-    js = (s) => win.webContents.executeJavaScript(s),
+    js = async (s) => {
+      try {
+        return await win.webContents.executeJavaScript(s);
+      } catch (error) {
+        throw Error(`Widget editing script failed: ${s}`, { cause: error });
+      }
+    },
     oldTarget = desktop.pointerTarget;
   const click = async (selector) => {
     await js(`document.querySelector(${JSON.stringify(selector)}).click()`);
@@ -120,6 +126,22 @@ module.exports = async ({
         disk.notes.find((n) => n.id === second).text ===
           "Сделать подборку фотографий",
     });
+    await js(
+      `document.querySelector('#note').value='Последний ввод';document.querySelector('#note').dispatchEvent(new Event('input'))`,
+    );
+    await click("#notes-list-toggle");
+    checks.push({
+      name: "switching away flushes the last note edit without waiting for debounce",
+      ok:
+        JSON.parse(fs.readFileSync(store.file))
+          .widgets.find((w) => w.id === note.id)
+          .notes.find((n) => n.id === second).text === "Последний ввод",
+    });
+    await click(`[data-note-id="${second}"]`);
+    await js(
+      `document.querySelector('#note').value='Сделать подборку фотографий';document.querySelector('#note').dispatchEvent(new Event('input'))`,
+    );
+    await click("#note-save");
     await click("#note-delete");
     await click("#note-delete");
     checks.push({
@@ -146,7 +168,10 @@ module.exports = async ({
       [17, "text", "#ff739a"],
     ]) {
       await cj(
-        `document.querySelectorAll('[data-date]')[${day - 1}].click();document.querySelector('#event').value='План на день';document.querySelector('#event').dispatchEvent(new Event('input'))`,
+        `document.querySelectorAll('[data-date]')[${day - 1}].onclick()`,
+      );
+      await cj(
+        `document.querySelector('#event').value='План на день';document.querySelector('#event').dispatchEvent(new Event('input'))`,
       );
       await wait(100);
       const date = await cj(

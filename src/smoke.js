@@ -67,7 +67,7 @@ module.exports = async ({
     await windows
       .get(calendar.id)
       .webContents.executeJavaScript(
-        `document.querySelector('[data-date="${testDate}"]').click();document.querySelector('#event').value='Встреча в 15:00';document.querySelector('#event').dispatchEvent(new Event('input'));`,
+        `document.querySelector('[data-date="${testDate}"]').onclick().then(()=>{document.querySelector('#event').value='Встреча в 15:00';document.querySelector('#event').dispatchEvent(new Event('input'));})`,
       );
     await wait(300);
     checks.push({
@@ -210,6 +210,16 @@ module.exports = async ({
     } finally {
       dialog.showOpenDialog = originalDialog;
     }
+    await manager.webContents.executeJavaScript(
+      `window.widgetAPI.remove('${photo.id}')`,
+    );
+    checks.push({
+      name: "removing a photo widget removes its managed image",
+      ok:
+        !fs.existsSync(
+          path.join(app.getPath("userData"), "photos", photo.id + ".png"),
+        ) && !store.data.widgets.some((w) => w.id === photo.id),
+    });
     const loginOptions = {
       path: process.execPath,
       args: ["--background"],

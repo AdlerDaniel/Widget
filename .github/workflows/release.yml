@@ -55,7 +55,7 @@ jobs:
             }
           } else {
             "published=false" >> $env:GITHUB_OUTPUT
-          } 
+          }
 
       - name: Install dependencies
         if: steps.existing.outputs.published != 'true'

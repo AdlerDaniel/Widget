@@ -143,12 +143,30 @@ function renderManager() {
   bindCalendarMarkers();
 }
 function bindManager() {
+  const flushManagerText = () => {
+    const editor = root.querySelector("textarea[data-prop]");
+    return editor && editing
+      ? api.patch(editing, {
+          [editor.dataset.prop]: editor.value,
+          saveNow: true,
+        })
+      : null;
+  };
   root.querySelectorAll("[data-nav]").forEach(
     (b) =>
       (b.onclick = () => {
-        view = b.dataset.nav;
-        editing = null;
-        renderManager();
+        const finish = () => {
+          view = b.dataset.nav;
+          editing = null;
+          renderManager();
+        };
+        const saving = flushManagerText();
+        return saving
+          ? act(async () => {
+              await saving;
+              finish();
+            })
+          : finish();
       }),
   );
   root.querySelectorAll("[data-add]").forEach(
@@ -167,14 +185,27 @@ function bindManager() {
   root.querySelectorAll("[data-edit]").forEach(
     (b) =>
       (b.onclick = () => {
-        editing = b.dataset.edit;
-        renderManager();
+        const finish = () => {
+          editing = b.dataset.edit;
+          renderManager();
+        };
+        const saving = flushManagerText();
+        return saving
+          ? act(async () => {
+              await saving;
+              finish();
+            })
+          : finish();
       }),
   );
   bind("#back", () => {
-    editing = null;
-    view = "mine";
-    renderManager();
+    const saving = flushManagerText();
+    const finish = () => {
+      editing = null;
+      view = "mine";
+      renderManager();
+    };
+    return saving ? saving.then(finish) : finish();
   });
   bind("#check-update", () => api.checkUpdates());
   bind("#choose-photo", () => api.photo(editing));
@@ -186,6 +217,7 @@ function bindManager() {
       return;
     }
     return act(async () => {
+      await flushManagerText();
       await api.remove(editing);
       editing = null;
       state = await api.state();
@@ -195,16 +227,29 @@ function bindManager() {
   const auto = document.querySelector("#autostart");
   if (auto) auto.onchange = () => act(() => api.autostart(auto.checked));
   root.querySelectorAll("[data-prop]").forEach((el) => {
-    const change = () => {
+    const widgetId = editing;
+    const change = (event) => {
+      if (event?.isComposing) return;
       const value =
         el.type === "checkbox"
           ? el.checked
           : el.type === "number" || el.dataset.number === "true"
             ? Number(el.value)
             : el.value;
-      act(() => api.patch(editing, { [el.dataset.prop]: value }));
+      act(() => api.patch(widgetId, { [el.dataset.prop]: value }));
     };
     el.addEventListener(el.tagName === "TEXTAREA" ? "input" : "change", change);
+    if (el.tagName === "TEXTAREA")
+      el.addEventListener("compositionend", change);
+    if (el.tagName === "TEXTAREA")
+      el.addEventListener("blur", () =>
+        act(() =>
+          api.patch(widgetId, {
+            [el.dataset.prop]: el.value,
+            saveNow: true,
+          }),
+        ),
+      );
   });
   bind("#search-city", searchCity);
   document.querySelector("#city-search")?.addEventListener("keydown", (e) => {
@@ -295,7 +340,7 @@ function widgetContent(w) {
   if (w.type === "weather") {
     const current = weather?.current;
     const [symbol, desc] = weatherDescription(current?.weather_code);
-    return `<div class="widget-content">${current ? `<div class="row spread weather-main"><span class="weather-temp">${Math.round(current.temperature_2m)}°</span><span class="weather-symbol">${["weather-sky", "weather-orbit"].includes(w.style) ? weatherArt(current.weather_code) : symbol}</span></div><div class="weather-desc">${desc}</div><div class="weather-detail"><span>Ощущается ${Math.round(current.apparent_temperature)}°</span><span>${current.relative_humidity_2m}%</span></div><div class="weather-detail" style="border:0"><span>Ветер ${Math.round(current.wind_speed_10m)} км/ч</span><span>${w.units === "fahrenheit" ? "°F" : "°C"}</span></div>` : `<div class="weather-error">${weatherError || "Загружаем погоду…"}${weatherError ? '<button class="secondary" id="retry-weather" style="margin-top:10px">Повторить</button>' : ""}</div>`}</div>`;
+    return `<div class="widget-content">${current ? `<div class="row spread weather-main"><span class="weather-temp">${Math.round(current.temperature_2m)}°</span><span class="weather-symbol">${["weather-sky", "weather-orbit"].includes(w.style) ? weatherArt(current.weather_code) : symbol}</span></div><div class="weather-desc">${desc}${weather.stale ? '<span class="weather-stale" role="status">Показаны последние данные</span>' : ""}</div><div class="weather-detail"><span>Ощущается ${Math.round(current.apparent_temperature)}°</span><span>${current.relative_humidity_2m}%</span></div><div class="weather-detail" style="border:0"><span>Ветер ${Math.round(current.wind_speed_10m)} км/ч</span><span>${w.units === "fahrenheit" ? "°F" : "°C"}</span></div>` : `<div class="weather-error">${weatherError || "Загружаем погоду…"}${weatherError ? '<button class="secondary" id="retry-weather" style="margin-top:10px">Повторить</button>' : ""}</div>`}</div>`;
   }
   if (w.type === "quote") {
     const currentDate = dateKey(new Date()),
@@ -356,16 +401,25 @@ function renderWidget() {
   mountWidgetInteractions(w);
   bindNotes(w);
   const event = document.querySelector("#event");
+  const eventDate = selectedDate;
+  const flushEvent = () =>
+    event
+      ? api.patch(id, {
+          event: { date: eventDate, text: event.value },
+          saveNow: true,
+        })
+      : Promise.resolve();
   if (event)
     event.oninput = (e) =>
       !e.isComposing &&
       act(() =>
-        api.patch(id, { event: { date: selectedDate, text: event.value } }),
+        api.patch(id, { event: { date: eventDate, text: event.value } }),
       );
   if (event)
     event.addEventListener("compositionend", () =>
       event.oninput({ isComposing: false }),
     );
+  if (event) event.addEventListener("blur", () => act(flushEvent));
   if (event)
     event.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
@@ -373,12 +427,14 @@ function renderWidget() {
         event.blur();
       }
     });
-  bind("#prev-month", () => {
+  bind("#prev-month", async () => {
+    await flushEvent();
     month = new Date(month.getFullYear(), month.getMonth() - 1, 1);
     selectedDate = dateKey(month);
     renderWidget();
   });
-  bind("#next-month", () => {
+  bind("#next-month", async () => {
+    await flushEvent();
     month = new Date(month.getFullYear(), month.getMonth() + 1, 1);
     selectedDate = dateKey(month);
     renderWidget();
@@ -387,6 +443,7 @@ function renderWidget() {
     (b) =>
       (b.onclick = () =>
         act(async () => {
+          await flushEvent();
           selectedDate = b.dataset.date;
           renderWidget();
           await api.focusInput();
@@ -526,7 +583,8 @@ api.onEdit((widgetId) => {
 api.state().then((s) => {
   state = s;
   id ? renderWidget() : renderManager();
-  if (id && s.widgets.find((w) => w.id === id)?.type === "quote")
+  const widgetType = id && s.widgets.find((w) => w.id === id)?.type;
+  if (widgetType === "quote")
     setInterval(() => {
       const nextDate = dateKey(new Date());
       if (nextDate !== renderedQuoteDate) {
@@ -534,12 +592,12 @@ api.state().then((s) => {
         renderWidget();
       }
     }, 60000);
+  if (widgetType === "clock") setInterval(tick, 1000);
+  if (widgetType === "weather")
+    setInterval(() => {
+      const w = state?.widgets.find((w) => w.id === id);
+      if (w?.type === "weather") fetchWeather(w, true);
+    }, 600000);
   if (s.recovered && !id)
     toast("Настройки восстановлены. Проверьте свои виджеты.");
 });
-setInterval(tick, 1000);
-if (id)
-  setInterval(() => {
-    const w = state?.widgets.find((w) => w.id === id);
-    if (w?.type === "weather") fetchWeather(w, true);
-  }, 600000);

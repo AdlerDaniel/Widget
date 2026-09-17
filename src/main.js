@@ -28,6 +28,8 @@ function systemColors() {
   };
 }
 const { TYPES, createWidget, patchWidget, clampBounds } = require("./model");
+const { WIDGET_META } = require("./widget-meta");
+const { removeWidgetPhoto, cleanupOrphanPhotos } = require("./photo-files");
 app.setPath("userData", path.join(app.getPath("appData"), "Widget"));
 app.setName("My Widget");
 const smoke = process.argv.includes("--smoke");
@@ -65,6 +67,7 @@ function state() {
   return {
     ...store.data,
     widgetStyles: styles,
+    widgetMeta: WIDGET_META,
     appearance,
     system,
     palette: themeTools.resolveAppearance(appearance, system),
@@ -127,6 +130,7 @@ function openManager() {
   );
   manager.once("ready-to-show", () => manager.show());
   manager.on("close", (e) => {
+    store.flushPending();
     if (!quitting) {
       e.preventDefault();
       manager.hide();
@@ -167,7 +171,10 @@ function widgetWindow(w) {
     win.showInactive();
     place(w, win);
   });
-  win.on("closed", () => windows.delete(w.id));
+  win.on("closed", () => {
+    windows.delete(w.id);
+    store?.flushPending();
+  });
   return win;
 }
 function selected(event, id) {
@@ -320,7 +327,15 @@ function registerIPC() {
         if (!/^#[a-f0-9]{6}$/i.test(patch[key] || "")) w[key] = current[key];
     }
     store.data.widgets[store.data.widgets.indexOf(old)] = w;
-    save();
+    const typing =
+      (w.type === "note" &&
+        (typeof patch.text === "string" ||
+          patch.noteAction?.type === "update")) ||
+      (w.type === "calendar" && typeof patch.event?.text === "string");
+    if (typing && patch.saveNow !== true) {
+      store.scheduleSave(350, log);
+      broadcast();
+    } else save();
     if (w.width !== old.width || w.height !== old.height)
       place(w, windows.get(id));
     return w;
@@ -328,10 +343,24 @@ function registerIPC() {
   ipcMain.handle("remove", (e, id) => {
     requireManager(e);
     requireUnlocked();
-    selected(e, id);
+    const removed = selected(e, id);
     store.data.widgets = store.data.widgets.filter((w) => w.id !== id);
     windows.get(id)?.destroy();
     save();
+    const photoDirectory = path.join(app.getPath("userData"), "photos");
+    try {
+      removeWidgetPhoto(photoDirectory, removed);
+    } catch (error) {
+      if (["EPERM", "EBUSY"].includes(error.code))
+        setTimeout(() => {
+          try {
+            removeWidgetPhoto(photoDirectory, removed);
+          } catch (retryError) {
+            log(retryError);
+          }
+        }, 500).unref();
+      else log(error);
+    }
   });
   ipcMain.handle("edit", (e, id) => {
     selected(e, id);
@@ -577,6 +606,15 @@ if (!app.requestSingleInstanceLock()) {
             screen.getAllDisplays().map((d) => d.workArea),
           ),
         );
+      if (!store.recovered)
+        try {
+          cleanupOrphanPhotos(
+            path.join(app.getPath("userData"), "photos"),
+            store.data.widgets,
+          );
+        } catch (error) {
+          log(error);
+        }
       for (const w of store.data.widgets) widgetWindow(w);
       const pointerStates = new Map();
       setInterval(() => {
