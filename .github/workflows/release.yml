@@ -65,6 +65,10 @@ jobs:
         if: steps.existing.outputs.published != 'true'
         run: npm test
 
+      - name: Verify day planner renderer
+        if: steps.existing.outputs.published != 'true'
+        run: npm run smoke:planner
+
       - name: Build Windows installer
         if: steps.existing.outputs.published != 'true'
         run: npm run dist

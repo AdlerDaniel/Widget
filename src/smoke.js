@@ -37,7 +37,7 @@ module.exports = async ({
       name: "add through catalog",
       ok: store.data.widgets.length > 0,
     });
-    for (const type of ["clock", "weather", "photo", "calendar", "quote"])
+    for (const type of ["clock", "weather", "photo", "calendar", "quote", "day-planner"])
       if (!store.data.widgets.find((w) => w.type === type)) {
         const w = createWidget(type);
         if (type === "calendar") w.events["2026-09-13"] = "Тестовая запись";
@@ -83,9 +83,9 @@ module.exports = async ({
     );
     await wait(200);
     checks.push({
-      name: "catalog exposes all six widget types without a hardcoded count",
+      name: "catalog exposes all seven widget types without a hardcoded count",
       ok: await manager.webContents.executeJavaScript(
-        `document.querySelectorAll('[data-add]').length===6&&!!document.querySelector('[data-add="quote"]')&&[...document.querySelectorAll('.pill')].some(el=>el.textContent.trim()==='6 виджетов')`,
+        `document.querySelectorAll('[data-add]').length===7&&!!document.querySelector('[data-add="day-planner"]')&&[...document.querySelectorAll('.pill')].some(el=>el.textContent.trim()==='7 виджетов')`,
       ),
     });
     fs.writeFileSync(

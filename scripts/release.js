@@ -33,6 +33,7 @@ const npm = process.env.npm_execpath;
 if (!npm) throw Error("Запускайте через npm run release -- НОМЕР_ВЕРСИИ");
 run(process.execPath, [npm, "install", "--package-lock-only"]);
 run(process.execPath, [npm, "test"]);
+run(process.execPath, [npm, "run", "smoke:planner"]);
 run(process.execPath, [npm, "run", "smoke"]);
 run(process.execPath, [npm, "run", "dist"]);
 run("git", ["add", "package.json", "package-lock.json", "changes.json"]);

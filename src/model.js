@@ -4,10 +4,11 @@ const { normalizeNotes, patchNotes } = require("./notes");
 const { validTheme } = require("./themes");
 const { validStyle, styleDefaults } = require("./widget-styles");
 const { WIDGET_META } = require("./widget-meta");
+const { normalizePlanner, patchPlanner } = require("./day-planner");
 const TYPES = Object.keys(WIDGET_META);
 function createWidget(type, offset = 0) {
   if (!TYPES.includes(type)) throw Error("Неизвестный виджет");
-  return normalizeNotes({
+  return normalizePlanner(normalizeNotes({
     id: crypto.randomUUID(),
     type,
     x: 80 + offset * 28,
@@ -34,13 +35,13 @@ function createWidget(type, offset = 0) {
     hour12: false,
     seconds: true,
     locked: false,
-    style: type === "quote" ? "quote-landscape" : "card",
+    style: type === "quote" ? "quote-landscape" : type === "day-planner" ? "day-planner" : "card",
     showTitle: type !== "quote",
     showBackground: true,
     events: {},
     eventMarkers: {},
     markerAutoDeleteDays: 0,
-  });
+  }));
 }
 function patchWidget(widget, patch) {
   const out = { ...widget };
@@ -127,7 +128,7 @@ function patchWidget(widget, patch) {
           color: patch.event.markerColor,
         };
   }
-  return patchNotes(out, patch);
+  return patchPlanner(patchNotes(out, patch), patch);
 }
 function markerExpired(widget, date, now = new Date()) {
   const days = widget.markerAutoDeleteDays || 0;

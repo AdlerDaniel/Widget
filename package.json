@@ -1,6 +1,6 @@
 {
   "name": "desktop-widget",
-  "version": "1.4.8",
+  "version": "1.4.9",
   "description": "Персональные виджеты рабочего стола Windows",
   "productName": "My Widget",
   "private": true,
@@ -10,6 +10,7 @@
     "test": "node --test tests/*.test.js",
     "smoke": "electron . --smoke",
     "smoke:quote-ci": "electron tests/quote-ci-smoke.cjs",
+    "smoke:planner": "electron tests/day-planner-smoke.cjs",
     "dist": "node scripts/build-config.js && electron-builder --config release-config.json --win nsis --x64 --publish never",
     "release": "node scripts/release.js"
   },

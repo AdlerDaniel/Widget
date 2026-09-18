@@ -64,7 +64,7 @@ function mountWidgetInteractions(w) {
     }
     if (e.button !== 0 || w.locked || state.update.required) return;
     const resizing = !!e.target.closest("#resize-grip");
-    if (!resizing && e.target.closest("button,textarea,input,select,a")) return;
+    if (!resizing && e.target.closest("button,textarea,input,select,a,.planner-interactive")) return;
     e.preventDefault();
     root.setPointerCapture(e.pointerId);
     widgetGesture = resizing ? "resize" : "move";

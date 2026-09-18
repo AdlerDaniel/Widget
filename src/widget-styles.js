@@ -86,6 +86,13 @@ const extra = {
       description: "Большая цитата и мягкий силуэт пейзажа",
     },
   ],
+  "day-planner": [
+    {
+      id: "day-planner",
+      name: "Ежедневник",
+      description: "Спокойный список и тонкая временная шкала",
+    },
+  ],
 };
 const styles = Object.fromEntries(
   Object.keys(extra).map((type) => [type, [...common, ...extra[type]]]),

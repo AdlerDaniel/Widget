@@ -18,6 +18,7 @@ const { pathToFileURL } = require("node:url");
 const Store = require("./store");
 const { styles, resizeBounds } = require("./widget-styles");
 const { normalizeNotes } = require("./notes");
+const { normalizePlanner } = require("./day-planner");
 const { newer } = require("./version");
 const { quoteForDate } = require("./quotes");
 const themeTools = require("./themes");
@@ -331,7 +332,8 @@ function registerIPC() {
       (w.type === "note" &&
         (typeof patch.text === "string" ||
           patch.noteAction?.type === "update")) ||
-      (w.type === "calendar" && typeof patch.event?.text === "string");
+      (w.type === "calendar" && typeof patch.event?.text === "string") ||
+      (w.type === "day-planner" && Object.hasOwn(patch, "plannerDraft"));
     if (typing && patch.saveNow !== true) {
       store.scheduleSave(350, log);
       broadcast();
@@ -602,7 +604,7 @@ if (!app.requestSingleInstanceLock()) {
         .filter((w) => TYPES.includes(w.type))
         .map((w) =>
           clampBounds(
-            normalizeNotes(w),
+            normalizePlanner(normalizeNotes(w)),
             screen.getAllDisplays().map((d) => d.workArea),
           ),
         );

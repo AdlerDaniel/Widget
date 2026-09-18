@@ -9,6 +9,7 @@ const names = {
   photo: "Моё фото",
   calendar: "Календарь",
   quote: "Цитата дня",
+  "day-planner": "План дня",
 };
 const descriptions = {
   weather: "Температура и погода в вашем городе.",
@@ -17,6 +18,7 @@ const descriptions = {
   photo: "Любимые моменты на рабочем столе.",
   calendar: "Планы и заметки для каждого дня.",
   quote: "Новая мысль и немного вдохновения каждый день.",
+  "day-planner": "Задачи и время в одном компактном ежедневнике.",
 };
 let state,
   view = "catalog",
@@ -79,6 +81,7 @@ function preview(t) {
       '<span class="small">Сентябрь</span><div class="mini-days">П В С Ч П С В<br>7 8 9 10 11 12 13<br>14 15 16 17 18 19 20</div>',
     quote:
       '<strong>Спокойствие<br>тоже прогресс.</strong><span class="quote-preview-sun"></span><span class="quote-preview-hill quote-preview-hill-far"></span><span class="quote-preview-hill quote-preview-hill-near"></span>',
+    "day-planner": '<span class="small">ПЯТНИЦА · 18 СЕНТЯБРЯ</span><p>○ Купить продукты<br>○ 14:00 Созвон<br>✓ Забрать посылку</p>',
   }[t];
 }
 function catalog() {
@@ -112,7 +115,7 @@ function editPanel() {
   }
   const input = (key, type = "text", extra = "") =>
     `<input data-prop="${key}" type="${type}" value="${esc(w[key])}" ${extra}>`;
-  return `<button class="back" id="back">← Мои виджеты</button><div class="intro"><div><div class="eyebrow">ИНДИВИДУАЛЬНЫЙ СТИЛЬ</div><h1>${names[w.type]}</h1><p>Изменения сразу появятся на рабочем столе.</p></div></div>${widgetDesignPanel(w)}${widgetAppearancePanel(w)}<div class="settings-panel"><div class="editor-preview" id="editor-preview" style="background:${w.background};color:${w.foreground};border-radius:${w.radius}px"><strong>${esc(w.title || names[w.type])}</strong><span style="color:${w.accent}">Aa · 123</span></div><div class="form-grid">${field("Название", input("title", "text", `placeholder="${names[w.type]}"`), true)}${field("Цвет фона", input("background", "color"))}${field("Цвет текста", input("foreground", "color"))}${field("Акцент", input("accent", "color"))}${widgetSliders(w)}</div><label class="check"><input data-prop="locked" type="checkbox" ${w.locked ? "checked" : ""}>Закрепить положение</label></div><div class="settings-panel">${w.type === "weather" ? `<h2>Ваш город</h2><p class="small">Сейчас: <span id="current-city">${esc(w.city)}</span></p><div class="row"><input id="city-search" placeholder="Название города" style="flex:1"><button class="secondary" id="search-city">Найти</button></div><div class="city-results" id="city-results"></div><label class="field" style="margin-top:18px">Единицы температуры<select data-prop="units"><option value="celsius" ${w.units === "celsius" ? "selected" : ""}>Градусы Цельсия · °C</option><option value="fahrenheit" ${w.units === "fahrenheit" ? "selected" : ""}>Градусы Фаренгейта · °F</option></select></label>` : w.type === "clock" ? `<h2>Отображение времени</h2><label class="check"><input data-prop="seconds" type="checkbox" ${w.seconds ? "checked" : ""}>Показывать секунды</label><label class="check"><input data-prop="hour12" type="checkbox" ${w.hour12 ? "checked" : ""}>12-часовой формат</label>` : w.type === "photo" ? `<h2>Любимый кадр</h2><p class="small">PNG, JPG или WebP, до 30 МБ. Копия фото сохраняется в приложении.</p><button class="primary" id="choose-photo">Выбрать фотографию</button><label class="field" style="margin-top:18px">Размещение<select data-prop="fit"><option value="cover" ${w.fit === "cover" ? "selected" : ""}>Заполнить виджет</option><option value="contain" ${w.fit === "contain" ? "selected" : ""}>Показать фото целиком</option></select></label>` : w.type === "note" ? `<h2>Текст заметки</h2><textarea data-prop="text" rows="7" style="width:100%" placeholder="Запишите важное…">${esc(w.text)}</textarea><p class="hint">Также можно писать прямо в виджете.</p>` : w.type === "quote" ? `<h2>Цитата дня</h2><p>Новая фраза появляется автоматически каждый день. Интернет для этого не требуется.</p>` : w.type === "calendar" ? `<h2>Планы на каждый день</h2><p>Выберите день в календаре на рабочем столе и напишите заметку под ним.</p>${calendarMarkerPanel(w)}` : `<h2>Настройки виджета</h2>`}</div><button class="danger" id="remove-widget">Удалить виджет</button><span class="hint" style="margin-left:15px">Будут удалены и его записи</span>`;
+  return `<button class="back" id="back">← Мои виджеты</button><div class="intro"><div><div class="eyebrow">ИНДИВИДУАЛЬНЫЙ СТИЛЬ</div><h1>${names[w.type]}</h1><p>Изменения сразу появятся на рабочем столе.</p></div></div>${widgetDesignPanel(w)}${widgetAppearancePanel(w)}<div class="settings-panel"><div class="editor-preview" id="editor-preview" style="background:${w.background};color:${w.foreground};border-radius:${w.radius}px"><strong>${esc(w.title || names[w.type])}</strong><span style="color:${w.accent}">Aa · 123</span></div><div class="form-grid">${field("Название", input("title", "text", `placeholder="${names[w.type]}"`), true)}${field("Цвет фона", input("background", "color"))}${field("Цвет текста", input("foreground", "color"))}${field("Акцент", input("accent", "color"))}${widgetSliders(w)}</div><label class="check"><input data-prop="locked" type="checkbox" ${w.locked ? "checked" : ""}>Закрепить положение</label></div><div class="settings-panel">${w.type === "day-planner" ? dayPlanner.settings(w) : w.type === "weather" ? `<h2>Ваш город</h2><p class="small">Сейчас: <span id="current-city">${esc(w.city)}</span></p><div class="row"><input id="city-search" placeholder="Название города" style="flex:1"><button class="secondary" id="search-city">Найти</button></div><div class="city-results" id="city-results"></div><label class="field" style="margin-top:18px">Единицы температуры<select data-prop="units"><option value="celsius" ${w.units === "celsius" ? "selected" : ""}>Градусы Цельсия · °C</option><option value="fahrenheit" ${w.units === "fahrenheit" ? "selected" : ""}>Градусы Фаренгейта · °F</option></select></label>` : w.type === "clock" ? `<h2>Отображение времени</h2><label class="check"><input data-prop="seconds" type="checkbox" ${w.seconds ? "checked" : ""}>Показывать секунды</label><label class="check"><input data-prop="hour12" type="checkbox" ${w.hour12 ? "checked" : ""}>12-часовой формат</label>` : w.type === "photo" ? `<h2>Любимый кадр</h2><p class="small">PNG, JPG или WebP, до 30 МБ. Копия фото сохраняется в приложении.</p><button class="primary" id="choose-photo">Выбрать фотографию</button><label class="field" style="margin-top:18px">Размещение<select data-prop="fit"><option value="cover" ${w.fit === "cover" ? "selected" : ""}>Заполнить виджет</option><option value="contain" ${w.fit === "contain" ? "selected" : ""}>Показать фото целиком</option></select></label>` : w.type === "note" ? `<h2>Текст заметки</h2><textarea data-prop="text" rows="7" style="width:100%" placeholder="Запишите важное…">${esc(w.text)}</textarea><p class="hint">Также можно писать прямо в виджете.</p>` : w.type === "quote" ? `<h2>Цитата дня</h2><p>Новая фраза появляется автоматически каждый день. Интернет для этого не требуется.</p>` : w.type === "calendar" ? `<h2>Планы на каждый день</h2><p>Выберите день в календаре на рабочем столе и напишите заметку под ним.</p>${calendarMarkerPanel(w)}` : `<h2>Настройки виджета</h2>`}</div><button class="danger" id="remove-widget">Удалить виджет</button><span class="hint" style="margin-left:15px">Будут удалены и его записи</span>`;
 }
 function updateOverlay() {
   const u = state.update;
@@ -335,6 +338,7 @@ function widgetContent(w) {
   if (w.type === "clock")
     return `<div class="widget-content clock-content">${w.style === "clock-dial" ? clockDial() : ""}<div class="clock-time" id="time"></div><div class="clock-date" id="date"></div><div class="clock-weekday" id="weekday"></div></div>`;
   if (w.type === "note") return notesContent(w);
+  if (w.type === "day-planner") return dayPlanner.render(w);
   if (w.type === "photo")
     return `<div class="widget-content">${w.photo ? `<img draggable="false" class="photo-image" src="${esc(w.photo)}" style="object-fit:${w.fit}" alt="Ваше фото">` : '<button class="photo-placeholder" id="widget-photo"><span>＋</span>Добавить своё фото</button>'}</div>`;
   if (w.type === "weather") {
@@ -400,6 +404,7 @@ function renderWidget() {
   bind("#retry-weather", () => fetchWeather(w, true));
   mountWidgetInteractions(w);
   bindNotes(w);
+  dayPlanner.mount(w);
   const event = document.querySelector("#event");
   const eventDate = selectedDate;
   const flushEvent = () =>
@@ -516,6 +521,7 @@ api.onState((s) => {
       after = s.widgets.find((w) => w.id === id);
     if (before && after && previous?.update.required === s.update.required) {
       if (JSON.stringify(before) === JSON.stringify(after)) return;
+      if (dayPlanner.shouldKeepEditor(before, after)) return;
       const editor = document.activeElement;
       if (
         editor?.matches("#note,#note-title,#event") &&
@@ -593,6 +599,7 @@ api.state().then((s) => {
       }
     }, 60000);
   if (widgetType === "clock") setInterval(tick, 1000);
+  if (widgetType === "day-planner") setInterval(dayPlanner.tick, 60000);
   if (widgetType === "weather")
     setInterval(() => {
       const w = state?.widgets.find((w) => w.id === id);

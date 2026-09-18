@@ -32,6 +32,11 @@ const WIDGET_META = Object.freeze({
     minSize: Object.freeze([260, 190]),
     maxSize,
   }),
+  "day-planner": Object.freeze({
+    defaultSize: Object.freeze([360, 440]),
+    minSize: Object.freeze([280, 300]),
+    maxSize,
+  }),
 });
 
 module.exports = { WIDGET_META };

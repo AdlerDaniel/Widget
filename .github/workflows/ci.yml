@@ -30,10 +30,21 @@ jobs:
       - name: Verify quote renderer at responsive sizes
         run: npm run smoke:quote-ci
 
+      - name: Verify day planner interactions and responsive styles
+        run: npm run smoke:planner
+
       - name: Upload quote screenshots on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: quote-visual-smoke
           path: test-output/quote-ci-*.png
+          if-no-files-found: ignore
+
+      - name: Upload day planner screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: day-planner-visual-smoke
+          path: test-output/day-planner-*.png
           if-no-files-found: ignore
