@@ -59,6 +59,8 @@ test("system accent follows exact Windows RGB and mode", () => {
     const p = resolveTheme("system", { accent: "#ff6600", dark });
     assert.equal(p.accent, "#ff6600");
     assert.equal(p.mode, dark ? "dark" : "light");
+    assert.ok(contrastRatio(p.panel, p.text) >= 4.5);
+    assert.notEqual(p.panel, themes[`blue-${dark ? "dark" : "light"}`].panel);
   }
   assert.equal(onAccent("#ffffff"), "#111111");
   assert.equal(onAccent("#000000"), "#ffffff");
@@ -110,5 +112,8 @@ test("dark Windows accents remain readable as text in the app and widgets", () =
     system,
   );
   assert.ok(contrastRatio(widget.background, widget.accentText) >= 4.5);
-  assert.notEqual(readableColor(widget.background, system.accent), system.accent);
+  assert.notEqual(
+    readableColor(widget.background, system.accent),
+    system.accent,
+  );
 });

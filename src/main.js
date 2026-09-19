@@ -142,10 +142,17 @@ function openManager() {
 function bounds(w) {
   return { x: w.x, y: w.y, width: w.width, height: w.height };
 }
+function nativeRadius(w) {
+  if (w.style === "photo-round") return Math.min(w.width, w.height) / 2;
+  if (w.style === "photo-print") return 3;
+  if (w.style === "note-paper" || w.style === "note-sticky") return 4;
+  return w.radius;
+}
 function place(w, win) {
   try {
     if (desktop.attach(win)) {
       desktop.move(win, bounds(w), screen);
+      desktop.shape(win, bounds(w), nativeRadius(w), screen);
       return;
     }
   } catch (e) {
@@ -158,12 +165,14 @@ function widgetWindow(w) {
     ...bounds(w),
     frame: false,
     transparent: true,
+    backgroundColor: "#00000000",
     hasShadow: false,
     resizable: false,
     skipTaskbar: true,
     show: false,
     title: "My Widget — " + w.type,
   });
+  win.setBackgroundColor("#00000000");
   windows.set(w.id, win);
   win.loadFile(path.join(__dirname, "ui/index.html"), {
     query: { widget: w.id },
@@ -338,7 +347,9 @@ function registerIPC() {
       store.scheduleSave(350, log);
       broadcast();
     } else save();
-    if (w.width !== old.width || w.height !== old.height)
+    if (
+      ["width", "height", "radius", "style"].some((key) => w[key] !== old[key])
+    )
       place(w, windows.get(id));
     return w;
   });
@@ -459,6 +470,7 @@ function registerIPC() {
     drag = {
       id,
       mode: "move",
+      buttonSeen: false,
       start: screen.getCursorScreenPoint(),
       x: w.x,
       y: w.y,
@@ -471,6 +483,7 @@ function registerIPC() {
     drag = {
       id,
       mode: "resize",
+      buttonSeen: false,
       start: screen.getCursorScreenPoint(),
       width: w.width,
       height: w.height,
@@ -637,6 +650,12 @@ if (!app.requestSingleInstanceLock()) {
       else checkUpdates();
       setInterval(() => {
         if (!drag) return;
+        if (desktop.leftButtonDown()) drag.buttonSeen = true;
+        else if (drag.buttonSeen) {
+          drag = null;
+          save();
+          return;
+        }
         const w = store.data.widgets.find((w) => w.id === drag.id);
         if (!w) return;
         const p = screen.getCursorScreenPoint();

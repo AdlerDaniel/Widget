@@ -69,6 +69,10 @@ jobs:
         if: steps.existing.outputs.published != 'true'
         run: npm run smoke:planner
 
+      - name: Verify transparent Windows widget regions
+        if: steps.existing.outputs.published != 'true'
+        run: npm run smoke:window
+
       - name: Build Windows installer
         if: steps.existing.outputs.published != 'true'
         run: npm run dist

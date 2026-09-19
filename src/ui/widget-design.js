@@ -64,7 +64,11 @@ function mountWidgetInteractions(w) {
     }
     if (e.button !== 0 || w.locked || state.update.required) return;
     const resizing = !!e.target.closest("#resize-grip");
-    if (!resizing && e.target.closest("button,textarea,input,select,a,.planner-interactive")) return;
+    if (
+      !resizing &&
+      e.target.closest("button,textarea,input,select,a,.planner-interactive")
+    )
+      return;
     e.preventDefault();
     root.setPointerCapture(e.pointerId);
     widgetGesture = resizing ? "resize" : "move";
@@ -77,9 +81,9 @@ function mountWidgetInteractions(w) {
     endWidgetGesture();
   };
   root.onpointercancel = root.onlostpointercapture = () => endWidgetGesture();
-  window.onblur = () => {
-    endWidgetGesture();
-  };
+  // A desktop-parented window can lose focus as soon as Windows activates
+  // Explorer. Pointer release and the native mouse-button check finish the
+  // gesture; blur must not cancel a drag that has just started.
   const grip = document.querySelector("#resize-grip");
   if (grip)
     grip.onkeydown = (e) => {

@@ -45,6 +45,9 @@ const Rect = koffi.struct("DesktopRect", {
 const getRect = u.func(
   "bool __stdcall GetWindowRect(void * hwnd, _Out_ DesktopRect * rect)",
 );
+const getRegionBox = u.func(
+  "int __stdcall GetWindowRgnBox(void * hwnd, _Out_ DesktopRect * rect)",
+);
 const getStyle = u.func(
   "intptr_t __stdcall GetWindowLongPtrW(void * hwnd, int index)",
 );
@@ -54,6 +57,15 @@ const setStyle = u.func(
 const pos = u.func(
   "bool __stdcall SetWindowPos(void * hwnd, void * after, int x, int y, int cx, int cy, uint32 flags)",
 );
+const setRegion = u.func(
+  "int __stdcall SetWindowRgn(void * hwnd, void * region, bool redraw)",
+);
+const gdi = koffi.load("gdi32.dll");
+const roundRegion = gdi.func(
+  "void * __stdcall CreateRoundRectRgn(int left, int top, int right, int bottom, int width, int height)",
+);
+const deleteObject = gdi.func("bool __stdcall DeleteObject(void * object)");
+const keyState = u.func("short __stdcall GetAsyncKeyState(int key)");
 const Point = koffi.struct("DesktopPoint", { x: "long", y: "long" });
 const windowAt = u.func("void * __stdcall WindowFromPoint(DesktopPoint point)");
 const isChild = u.func("bool __stdcall IsChild(void * parent, void * child)");
@@ -75,6 +87,7 @@ const toClient = u.func(
   "bool __stdcall ScreenToClient(void * hwnd, _Inout_ DesktopPoint * point)",
 );
 let host = null;
+const windowShapes = new WeakMap();
 function discover() {
   const prog = find("Progman", null);
   if (!prog) return null;
@@ -120,18 +133,57 @@ function move(win, bounds, screen) {
     0x0014,
   );
 }
+function shape(win, bounds, radius, screen, enabled = true) {
+  const h = handle(win);
+  if (!enabled || radius <= 0) {
+    if (windowShapes.get(win) !== "none") {
+      setRegion(h, null, true);
+      windowShapes.set(win, "none");
+    }
+    return;
+  }
+  const display = screen.getDisplayMatching(bounds);
+  const width = Math.round(bounds.width * display.scaleFactor);
+  const height = Math.round(bounds.height * display.scaleFactor);
+  const diameter = Math.max(
+    2,
+    Math.min(width, height, Math.round(radius * display.scaleFactor * 2)),
+  );
+  const shapeKey = `${width}:${height}:${diameter}`;
+  if (windowShapes.get(win) === shapeKey) return;
+  const region = roundRegion(0, 0, width + 1, height + 1, diameter, diameter);
+  if (region) {
+    if (setRegion(h, region, true)) windowShapes.set(win, shapeKey);
+    else deleteObject(region);
+  }
+}
+function leftButtonDown() {
+  return (keyState(0x01) & 0x8000) !== 0;
+}
 function inspect(win) {
   const h = handle(win),
     p = getParent(h),
     buffer = Buffer.alloc(512),
-    r = {};
+    r = {},
+    region = {};
   if (p) className(p, buffer, 256);
   getRect(h, r);
+  const regionType = getRegionBox(h, region);
   return {
     attached: !!p && p === host,
     parentClass: buffer.toString("utf16le").replace(/\0.*$/s, ""),
     visible: visible(h),
     rect: r,
+    regionType,
+    region,
   };
 }
-module.exports = { attach, move, inspect, pointerTarget, focusInput };
+module.exports = {
+  attach,
+  move,
+  shape,
+  inspect,
+  pointerTarget,
+  focusInput,
+  leftButtonDown,
+};

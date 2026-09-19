@@ -119,8 +119,7 @@ function contrastText(background, preferred = "#ffffff") {
 function readableColor(background, color) {
   if (contrastRatio(background, color) >= 4.5) return color;
   const target =
-    contrastRatio(background, "#ffffff") >=
-    contrastRatio(background, "#111111")
+    contrastRatio(background, "#ffffff") >= contrastRatio(background, "#111111")
       ? "#ffffff"
       : "#111111";
   for (let amount = 0.05; amount <= 1; amount += 0.05) {
@@ -176,13 +175,27 @@ function resolveTheme(id, system = { accent: "#739cff", dark: true }) {
     const accent = /^#[a-f0-9]{6}$/i.test(system.accent)
       ? system.accent
       : base.accent;
+    const dark = system.dark === true;
+    const bg = dark
+      ? mix(accent, "#101318", 0.88)
+      : mix(accent, "#ffffff", 0.94);
+    const panel = dark
+      ? mix(accent, "#1b2027", 0.86)
+      : mix(accent, "#ffffff", 0.975);
+    const text = contrastText(panel, dark ? "#f4f6f8" : "#17191c");
     return {
-      ...base,
       id: "system",
       name: "Акцент Windows",
+      mode: dark ? "dark" : "light",
+      bg,
+      panel,
+      hover: mix(accent, panel, dark ? 0.72 : 0.82),
+      text,
+      muted: mix(text, panel, 0.42),
+      border: mix(accent, panel, dark ? 0.58 : 0.7),
       accent,
       onAccent: onAccent(accent),
-      selected: mix(accent, base.bg, 0.8),
+      selected: mix(accent, panel, dark ? 0.68 : 0.8),
     };
   }
   return themes[id] || themes["purple-dark"];

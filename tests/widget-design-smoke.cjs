@@ -101,6 +101,37 @@ module.exports = async ({
           store.data.widgets.find((w) => w.id === note.id).width ===
           beforeKey + 20,
       });
+      const moveStart = {
+        x: store.data.widgets.find((w) => w.id === note.id).x,
+        y: store.data.widgets.find((w) => w.id === note.id).y,
+      };
+      cursor = { x: 410, y: 360 };
+      await js(`(()=>{
+        const handle=document.querySelector('#drag');
+        const capture=root.setPointerCapture;
+        root.setPointerCapture=()=>{};
+        root.onpointerdown({button:0,target:handle,pointerId:91,preventDefault(){}});
+        root.setPointerCapture=capture;
+        window.dispatchEvent(new Event('blur'));
+      })()`);
+      await wait(60);
+      cursor = { x: 468, y: 397 };
+      await wait(100);
+      await js(`root.onpointerup({pointerId:91})`);
+      await wait(60);
+      n = store.data.widgets.find((w) => w.id === note.id);
+      const movedRect = desktop.inspect(win).rect;
+      checks.push({
+        name: "widget drag survives desktop focus blur and saves position",
+        ok:
+          n.x === moveStart.x + 58 &&
+          n.y === moveStart.y + 37 &&
+          movedRect.left === n.x &&
+          movedRect.top === n.y &&
+          JSON.parse(fs.readFileSync(store.file)).widgets.find(
+            (w) => w.id === note.id,
+          ).x === n.x,
+      });
     } finally {
       screen.getCursorScreenPoint = oldCursor;
     }
