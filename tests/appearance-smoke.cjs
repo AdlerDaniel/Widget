@@ -11,28 +11,16 @@ module.exports = async ({ manager, store, windows, checks, out }) => {
   await js(`window.widgetAPI.patch('${note.id}',{theme:'app'})`);
   await js(`document.querySelector('[data-nav="settings"]').click()`);
   checks.push({
-    name: "program text contrast is enabled by default",
+    name: "automatic contrast is fixed on and manual program controls are absent",
     ok:
-      (await js(`document.querySelector('[data-text-auto="app"]').checked`)) &&
+      store.data.appearance.autoTextContrast === true &&
+      (await js(
+        `!document.querySelector('[data-text-auto]')&&!document.querySelector('[data-text-color]')`,
+      )) &&
       (await js(
         `getComputedStyle(document.documentElement).getPropertyValue('--ui-icon').trim()!==''`,
       )),
   });
-  await js(
-    `document.querySelector('[data-text-auto="app"]').click();document.querySelector('[data-text-color="app"]').value='#ff22aa';document.querySelector('[data-text-color="app"]').dispatchEvent(new Event('change'))`,
-  );
-  await wait(130);
-  checks.push({
-    name: "program keeps its independently selected text color",
-    ok:
-      store.data.appearance.autoTextContrast === false &&
-      store.data.appearance.foreground === "#ff22aa" &&
-      (await js(
-        `getComputedStyle(document.documentElement).getPropertyValue('--ui-text').trim()==='#ff22aa'`,
-      )),
-  });
-  await js(`document.querySelector('[data-text-auto="app"]').click()`);
-  await wait(130);
   for (const id of Object.keys(require("../src/themes").themes)) {
     await js(`document.querySelector('[data-theme="${id}"]').click()`);
     await wait(130);
@@ -74,22 +62,16 @@ module.exports = async ({ manager, store, windows, checks, out }) => {
   await js(`window.widgetAPI.appearance({opacity:100})`);
   await js(`document.querySelector('[data-nav="mine"]').onclick()`);
   await js(`document.querySelector('[data-edit="${note.id}"]').click()`);
-  await js(
-    `document.querySelector('[data-text-auto="widget"]').click();document.querySelector('[data-text-color="widget"]').value='#12ab34';document.querySelector('[data-text-color="widget"]').dispatchEvent(new Event('change'))`,
-  );
-  await wait(130);
   checks.push({
-    name: "widget text color does not detach its theme",
+    name: "manual widget text controls are absent and theme stays attached",
     ok:
       store.data.widgets.find((w) => w.id === note.id).theme === "app" &&
-      store.data.widgets.find((w) => w.id === note.id).foreground ===
-        "#12ab34" &&
-      (await win.webContents.executeJavaScript(
-        `getComputedStyle(document.querySelector('.widget')).getPropertyValue('--fg').trim()==='#12ab34'`,
+      store.data.widgets.find((w) => w.id === note.id).autoTextContrast ===
+        true &&
+      (await js(
+        `!document.querySelector('[data-text-auto]')&&!document.querySelector('[data-text-color]')&&!document.querySelector('[data-prop="foreground"]')`,
       )),
   });
-  await js(`document.querySelector('[data-text-auto="widget"]').click()`);
-  await wait(130);
   for (const [key, val] of [
     ["width", 410],
     ["height", 355],

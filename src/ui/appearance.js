@@ -13,7 +13,7 @@ function themeChoices(value, scope) {
   const presets = state.themes.filter((t) => t.id !== "system");
   const render = (t) =>
     `<button type="button" class="theme-choice ${value === t.id ? "chosen" : ""}" data-theme="${t.id}" data-theme-scope="${scope}" aria-pressed="${value === t.id}" title="${esc(t.name)}"><span class="theme-swatch" style="background:${t.bg};border-color:${t.border}"><i style="background:${t.panel}"></i><b style="background:${t.accent}"></b><em style="background:${t.text}"></em></span><span>${esc(t.name)}</span></button>`;
-  return `<div class="theme-options">${scope === "widget" ? `<button class="theme-mode ${value === "app" ? "chosen" : ""}" data-theme="app" data-theme-scope="widget" aria-pressed="${value === "app"}">↗ Как у программы</button><button class="theme-mode ${value === "custom" ? "chosen" : ""}" data-theme="custom" data-theme-scope="widget" aria-pressed="${value === "custom"}">◉ Свои цвета</button>` : ""}<button class="theme-mode ${value === "system" ? "chosen" : ""}" data-theme="system" data-theme-scope="${scope}" aria-pressed="${value === "system"}"><i style="background:${state.system.accent}"></i>Акцент Windows</button></div><p class="hint">Системная тема использует акцент Windows и автоматически следует светлому или тёмному режиму.</p><div class="theme-label">Тёмные</div><div class="theme-grid">${presets
+  return `<div class="theme-options">${scope === "widget" ? `<button class="theme-mode ${value === "app" ? "chosen" : ""}" data-theme="app" data-theme-scope="widget" aria-pressed="${value === "app"}">↗ Как у программы</button><button class="theme-mode ${value === "custom" ? "chosen" : ""}" data-theme="custom" data-theme-scope="widget" aria-pressed="${value === "custom"}">◉ Свои цвета</button>` : ""}<button class="theme-mode ${value === "system" ? "chosen" : ""}" data-theme="system" data-theme-scope="${scope}" aria-pressed="${value === "system"}"><i style="background:${state.system.accent}"></i>Акцент Windows</button></div><div class="theme-label">Тёмные</div><div class="theme-grid">${presets
     .filter((t) => t.mode === "dark")
     .map(render)
     .join(
@@ -24,15 +24,15 @@ function themeChoices(value, scope) {
     .join("")}</div>`;
 }
 function appAppearancePanel() {
-  return `<section class="settings-panel appearance-panel"><div class="eyebrow">ЦВЕТ И НАСТРОЕНИЕ</div><h2>Оформление программы</h2>${themeChoices(state.appearance.theme, "app")}<div class="appearance-divider"></div><div class="text-contrast-controls"><label class="check"><input type="checkbox" data-text-auto="app" ${state.appearance.autoTextContrast ? "checked" : ""}>Автоматически делать текст и значок контрастными</label><label class="field">Свой цвет текста<input type="color" data-text-color="app" value="${state.appearance.foreground}" ${state.appearance.autoTextContrast ? "disabled" : ""}></label><p class="hint">В автоматическом режиме программа выбирает светлый или тёмный текст по фону. Свой цвет сохраняется при смене темы.</p></div>${rangeControl("Прозрачность окна", "transparency", 100 - state.appearance.opacity, 0, 65, "%", "app")}<p class="hint">Прозрачность применяется ко всему окну программы. Виджеты настраиваются отдельно.</p><div class="actions"><button class="secondary" id="theme-all">Применить тему ко всем виджетам</button><button class="secondary" id="app-opaque">Сделать окно непрозрачным</button></div><p class="hint">Общая тема не меняет положение, размер, прозрачность и записи виджетов.</p></section>`;
+  return `<section class="settings-panel appearance-panel"><div class="eyebrow">ЦВЕТ И НАСТРОЕНИЕ</div><h2>Оформление программы</h2>${themeChoices(state.appearance.theme, "app")}<div class="appearance-divider"></div>${rangeControl("Прозрачность окна", "transparency", 100 - state.appearance.opacity, 0, 65, "%", "app")}<div class="actions"><button class="secondary" id="theme-all">Применить тему ко всем виджетам</button><button class="secondary" id="app-opaque">Сделать окно непрозрачным</button></div></section>`;
 }
 function widgetAppearancePanel(w) {
-  return `<section class="settings-panel appearance-panel"><h2>Тема виджета</h2>${themeChoices(w.theme || "custom", "widget")}<div class="appearance-divider"></div><div class="text-contrast-controls"><label class="check"><input type="checkbox" data-text-auto="widget" ${w.autoTextContrast !== false ? "checked" : ""}>Автоматически делать текст контрастным</label><label class="field">Свой цвет текста<input type="color" data-text-color="widget" value="${w.foreground}" ${w.autoTextContrast !== false ? "disabled" : ""}></label><p class="hint">Настройка действует только для этого виджета и не меняет выбранную тему.</p></div></section>`;
+  return `<section class="settings-panel appearance-panel"><h2>Тема виджета</h2>${themeChoices(w.theme || "custom", "widget")}</section>`;
 }
 function widgetSliders(w) {
   const { minSize, maxSize } = state.widgetMeta[w.type];
   return `<div class="wide preset-row"><span class="hint">Быстрый размер</span>${["Компактный", "Обычный", "Крупный"].map((n, i) => `<button class="secondary" data-size="${i}">${n}</button>`).join("")}</div>${rangeControl("Ширина", "width", w.width, minSize[0], maxSize[0], " px")}${rangeControl("Высота", "height", w.height, minSize[1], maxSize[1], " px")}${rangeControl("Прозрачность всего виджета", "widgetTransparency", 100 - (w.widgetOpacity ?? 100), 0, 75, "%")}
-${rangeControl("Прозрачность фона", "transparency", 100 - w.opacity, 0, 75, "%")}${rangeControl("Размер текста", "fontSize", w.fontSize, 12, 30, " px")}${rangeControl("Скругление углов", "radius", w.radius, 0, 40, " px")}<div class="wide hint">Ползунки работают сразу. Для точной настройки используйте стрелки ← и → на клавиатуре. Прозрачность фона не затрагивает текст и фото; прозрачность всего виджета применяется ко всем элементам.</div>`;
+${rangeControl("Прозрачность фона", "transparency", 100 - w.opacity, 0, 75, "%")}${rangeControl("Размер текста", "fontSize", w.fontSize, 12, 30, " px")}${rangeControl("Скругление углов", "radius", w.radius, 0, 40, " px")}`;
 }
 function applyAppPalette() {
   if (!state) return;
@@ -43,26 +43,6 @@ function applyAppPalette() {
   document.documentElement.style.colorScheme = p.mode;
 }
 function bindAppearance() {
-  root.querySelectorAll("[data-text-auto]").forEach((el) => {
-    el.onchange = () =>
-      act(async () => {
-        const patch = { autoTextContrast: el.checked };
-        if (el.dataset.textAuto === "app") await api.appearance(patch);
-        else await api.patch(editing, patch);
-        state = await api.state();
-        renderManager();
-      });
-  });
-  root.querySelectorAll("[data-text-color]").forEach((el) => {
-    el.onchange = () =>
-      act(async () => {
-        const patch = { foreground: el.value, autoTextContrast: false };
-        if (el.dataset.textColor === "app") await api.appearance(patch);
-        else await api.patch(editing, patch);
-        state = await api.state();
-        renderManager();
-      });
-  });
   root.querySelectorAll("[data-theme]").forEach(
     (button) =>
       (button.onclick = () =>
@@ -75,7 +55,6 @@ function bindAppearance() {
             if (p.theme === "custom")
               Object.assign(p, {
                 background: w.background,
-                foreground: w.foreground,
                 accent: w.accent,
               });
             await api.patch(editing, p);

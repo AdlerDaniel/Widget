@@ -207,18 +207,14 @@ function appearance(p = {}) {
     opacity: Number.isFinite(p.opacity)
       ? Math.max(35, Math.min(100, p.opacity))
       : 100,
-    autoTextContrast: p.autoTextContrast !== false,
-    foreground: /^#[a-f0-9]{6}$/i.test(p.foreground || "")
-      ? p.foreground
-      : resolveTheme(theme).text,
+    autoTextContrast: true,
+    foreground: resolveTheme(theme).text,
   };
 }
 function resolveAppearance(p, system) {
   const a = appearance(p);
   const palette = resolveTheme(a.theme, system);
-  const text = a.autoTextContrast
-    ? contrastText(palette.bg, palette.text)
-    : a.foreground;
+  const text = contrastText(palette.bg, palette.text);
   const accentText = readableColor(
     palette.panel,
     readableColor(palette.bg, palette.accent),
@@ -233,17 +229,20 @@ function resolveAppearance(p, system) {
 function resolveWidget(w, appAppearance, system) {
   let t;
   const custom = !w.theme || w.theme === "custom";
-  if (custom) t = { panel: w.background, text: w.foreground, accent: w.accent };
+  if (custom)
+    t = {
+      panel: w.background,
+      text: contrastText(w.background),
+      accent: w.accent,
+    };
   else
     t = resolveTheme(w.theme === "app" ? appAppearance.theme : w.theme, system);
-  const autoTextContrast = w.autoTextContrast !== false;
-  const foreground =
-    autoTextContrast === false ? w.foreground : contrastText(t.panel, t.text);
+  const foreground = contrastText(t.panel, t.text);
   const accentText = readableColor(t.panel, t.accent);
   return {
     ...w,
     theme: custom ? "custom" : w.theme,
-    autoTextContrast,
+    autoTextContrast: true,
     background: t.panel,
     foreground,
     accent: t.accent,

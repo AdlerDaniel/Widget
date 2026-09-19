@@ -19,7 +19,7 @@ test("twelve palettes and existing MediaCategorize colors", () => {
     for (const field of ["bg", "panel", "text", "accent", "onAccent"])
       assert.match(t[field], /^#[a-f0-9]{6}$/i);
 });
-test("legacy widgets preserve colors, content, bounds and opacity", () => {
+test("legacy widgets preserve content, bounds and opacity with safe text", () => {
   const w = {
     ...createWidget("note"),
     theme: undefined,
@@ -39,7 +39,7 @@ test("legacy widgets preserve colors, content, bounds and opacity", () => {
   assert.equal(r.x, -900);
   assert.equal(r.theme, "custom");
   assert.equal(r.autoTextContrast, true);
-  assert.equal(r.foreground, w.foreground);
+  assert.ok(contrastRatio(r.background, r.foreground) >= 4.5);
 });
 test("inherited themes track app; independent themes do not", () => {
   const w = createWidget("calendar");
@@ -74,7 +74,7 @@ test("appearance limits and invalid theme input are safe", () => {
     "app",
   );
 });
-test("automatic text reaches readable contrast and manual colors stay independent", () => {
+test("automatic text contrast is always enabled and manual colors are ignored", () => {
   const app = resolveAppearance(
     { theme: "purple-dark", foreground: "#18121e" },
     {},
@@ -89,16 +89,17 @@ test("automatic text reaches readable contrast and manual colors stay independen
     },
     {},
   );
-  assert.equal(manualApp.text, "#ff22aa");
+  assert.notEqual(manualApp.text, "#ff22aa");
+  assert.ok(contrastRatio(manualApp.bg, manualApp.text) >= 4.5);
   const themed = patchWidget(createWidget("clock"), {
     foreground: "#12ab34",
     autoTextContrast: false,
   });
   assert.equal(themed.theme, "app");
-  assert.equal(
-    resolveWidget(themed, { theme: "brown-dark" }, {}).foreground,
-    "#12ab34",
-  );
+  assert.equal(themed.autoTextContrast, true);
+  const resolved = resolveWidget(themed, { theme: "brown-dark" }, {});
+  assert.notEqual(resolved.foreground, "#12ab34");
+  assert.ok(contrastRatio(resolved.background, resolved.foreground) >= 4.5);
 });
 test("dark Windows accents remain readable as text in the app and widgets", () => {
   const system = { accent: "#050507", dark: true };

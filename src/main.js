@@ -407,6 +407,7 @@ function registerIPC() {
     fs.mkdirSync(dir, { recursive: true });
     const dest = path.join(dir, id + ".png");
     const size = im.getSize();
+    w.photoAspect = size.width / size.height;
     fs.writeFileSync(
       dest,
       (Math.max(size.width, size.height) > 4096
@@ -617,7 +618,10 @@ if (!app.requestSingleInstanceLock()) {
         .filter((w) => TYPES.includes(w.type))
         .map((w) =>
           clampBounds(
-            normalizePlanner(normalizeNotes(w)),
+            {
+              ...normalizePlanner(normalizeNotes(w)),
+              autoTextContrast: true,
+            },
             screen.getAllDisplays().map((d) => d.workArea),
           ),
         );

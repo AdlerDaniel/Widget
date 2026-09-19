@@ -81,7 +81,8 @@ function preview(t) {
       '<span class="small">Сентябрь</span><div class="mini-days">П В С Ч П С В<br>7 8 9 10 11 12 13<br>14 15 16 17 18 19 20</div>',
     quote:
       '<strong>Спокойствие<br>тоже прогресс.</strong><span class="quote-preview-sun"></span><span class="quote-preview-hill quote-preview-hill-far"></span><span class="quote-preview-hill quote-preview-hill-near"></span>',
-    "day-planner": '<span class="small">ПЯТНИЦА · 18 СЕНТЯБРЯ</span><p>○ Купить продукты<br>○ 14:00 Созвон<br>✓ Забрать посылку</p>',
+    "day-planner":
+      '<span class="small">ПЯТНИЦА · 18 СЕНТЯБРЯ</span><p>○ Купить продукты<br>○ 14:00 Созвон<br>✓ Забрать посылку</p>',
   }[t];
 }
 function catalog() {
@@ -101,10 +102,9 @@ function mine() {
 }
 function settings() {
   const u = state.update;
-  return `<div class="eyebrow">ПАРАМЕТРЫ</div><h1>Удобно каждый день</h1>${appAppearancePanel()}<div class="settings-panel" style="margin-top:25px"><h2>Запуск вместе с Windows</h2><p>Ваши виджеты появятся автоматически после входа в систему. Окно каталога открываться не будет.</p><label class="check"><input id="autostart" type="checkbox" ${state.autostart ? "checked" : ""}>Включать виджеты при входе в Windows</label></div><div class="settings-panel"><div class="row spread"><h2>Версия ${esc(state.version)}</h2><span class="pill">${u.status === "checking" ? "Проверяем…" : u.status === "current" ? "Установлена актуальная версия" : "Обновления"}</span></div><p>${(state.changes || []).map(esc).join("<br>")}</p>${u.status === "error" ? `<p class="status-error">${esc(u.message)}</p>` : ""}<button class="secondary" id="check-update">Проверить обновления</button></div><div class="settings-panel"><h2>Как управлять виджетами</h2><p>Шестерёнка настроек появляется через 2 секунды наведения. Потяните за нижний правый угол, чтобы изменить размер. Перемещайте виджет за заголовок или свободное место. Записи сохраняются автоматически. Пункт «Вернуть виджеты на экран» в трее поможет после смены монитора.</p><p class="small">Погода: Open-Meteo · CC BY 4.0. Фотографии и заметки хранятся на вашем компьютере.</p></div>`;
+  return `<div class="eyebrow">ПАРАМЕТРЫ</div><h1>Удобно каждый день</h1>${appAppearancePanel()}<div class="settings-panel" style="margin-top:25px"><h2>Запуск вместе с Windows</h2><p>Ваши виджеты появятся автоматически после входа в систему. Окно каталога открываться не будет.</p><label class="check"><input id="autostart" type="checkbox" ${state.autostart ? "checked" : ""}>Включать виджеты при входе в Windows</label></div><div class="settings-panel"><div class="row spread"><h2>Версия ${esc(state.version)}</h2><span class="pill">${u.status === "checking" ? "Проверяем…" : u.status === "current" ? "Установлена актуальная версия" : "Обновления"}</span></div><p>${(state.changes || []).map(esc).join("<br>")}</p>${u.status === "error" ? `<p class="status-error">${esc(u.message)}</p>` : ""}<button class="secondary" id="check-update">Проверить обновления</button></div>`;
 }
 function field(label, input, wide = false) {
-  if (label === "Цвет текста") return "";
   return `<label class="field${wide ? " wide" : ""}">${label}${input}</label>`;
 }
 function editPanel() {
@@ -115,7 +115,7 @@ function editPanel() {
   }
   const input = (key, type = "text", extra = "") =>
     `<input data-prop="${key}" type="${type}" value="${esc(w[key])}" ${extra}>`;
-  return `<button class="back" id="back">← Мои виджеты</button><div class="intro"><div><div class="eyebrow">ИНДИВИДУАЛЬНЫЙ СТИЛЬ</div><h1>${names[w.type]}</h1><p>Изменения сразу появятся на рабочем столе.</p></div></div>${widgetDesignPanel(w)}${widgetAppearancePanel(w)}<div class="settings-panel"><div class="editor-preview" id="editor-preview" style="background:${w.background};color:${w.foreground};border-radius:${w.radius}px"><strong>${esc(w.title || names[w.type])}</strong><span style="color:${w.accent}">Aa · 123</span></div><div class="form-grid">${field("Название", input("title", "text", `placeholder="${names[w.type]}"`), true)}${field("Цвет фона", input("background", "color"))}${field("Цвет текста", input("foreground", "color"))}${field("Акцент", input("accent", "color"))}${widgetSliders(w)}</div><label class="check"><input data-prop="locked" type="checkbox" ${w.locked ? "checked" : ""}>Закрепить положение</label></div><div class="settings-panel">${w.type === "day-planner" ? dayPlanner.settings(w) : w.type === "weather" ? `<h2>Ваш город</h2><p class="small">Сейчас: <span id="current-city">${esc(w.city)}</span></p><div class="row"><input id="city-search" placeholder="Название города" style="flex:1"><button class="secondary" id="search-city">Найти</button></div><div class="city-results" id="city-results"></div><label class="field" style="margin-top:18px">Единицы температуры<select data-prop="units"><option value="celsius" ${w.units === "celsius" ? "selected" : ""}>Градусы Цельсия · °C</option><option value="fahrenheit" ${w.units === "fahrenheit" ? "selected" : ""}>Градусы Фаренгейта · °F</option></select></label>` : w.type === "clock" ? `<h2>Отображение времени</h2><label class="check"><input data-prop="seconds" type="checkbox" ${w.seconds ? "checked" : ""}>Показывать секунды</label><label class="check"><input data-prop="hour12" type="checkbox" ${w.hour12 ? "checked" : ""}>12-часовой формат</label>` : w.type === "photo" ? `<h2>Любимый кадр</h2><p class="small">PNG, JPG или WebP, до 30 МБ. Копия фото сохраняется в приложении.</p><button class="primary" id="choose-photo">Выбрать фотографию</button><label class="field" style="margin-top:18px">Размещение<select data-prop="fit"><option value="cover" ${w.fit === "cover" ? "selected" : ""}>Заполнить виджет</option><option value="contain" ${w.fit === "contain" ? "selected" : ""}>Показать фото целиком</option></select></label>` : w.type === "note" ? `<h2>Текст заметки</h2><textarea data-prop="text" rows="7" style="width:100%" placeholder="Запишите важное…">${esc(w.text)}</textarea><p class="hint">Также можно писать прямо в виджете.</p>` : w.type === "quote" ? `<h2>Цитата дня</h2><p>Новая фраза появляется автоматически каждый день. Интернет для этого не требуется.</p>` : w.type === "calendar" ? `<h2>Планы на каждый день</h2><p>Выберите день в календаре на рабочем столе и напишите заметку под ним.</p>${calendarMarkerPanel(w)}` : `<h2>Настройки виджета</h2>`}</div><button class="danger" id="remove-widget">Удалить виджет</button><span class="hint" style="margin-left:15px">Будут удалены и его записи</span>`;
+  return `<button class="back" id="back">← Мои виджеты</button><div class="intro"><div><div class="eyebrow">ИНДИВИДУАЛЬНЫЙ СТИЛЬ</div><h1>${names[w.type]}</h1><p>Изменения сразу появятся на рабочем столе.</p></div></div>${widgetDesignPanel(w)}${widgetAppearancePanel(w)}<div class="settings-panel"><div class="editor-preview" id="editor-preview" style="background:${w.background};color:${w.foreground};border-radius:${w.radius}px"><strong>${esc(w.title || names[w.type])}</strong><span style="color:${w.accent}">Aa · 123</span></div><div class="form-grid">${field("Название", input("title", "text", `placeholder="${names[w.type]}"`), true)}${field("Цвет фона", input("background", "color"))}${field("Акцент", input("accent", "color"))}${widgetSliders(w)}</div><label class="check"><input data-prop="locked" type="checkbox" ${w.locked ? "checked" : ""}>Закрепить положение</label></div><div class="settings-panel">${w.type === "day-planner" ? dayPlanner.settings(w) : w.type === "weather" ? `<h2>Ваш город</h2><p class="small">Сейчас: <span id="current-city">${esc(w.city)}</span></p><div class="row"><input id="city-search" placeholder="Название города" style="flex:1"><button class="secondary" id="search-city">Найти</button></div><div class="city-results" id="city-results"></div><label class="field" style="margin-top:18px">Единицы температуры<select data-prop="units"><option value="celsius" ${w.units === "celsius" ? "selected" : ""}>Градусы Цельсия · °C</option><option value="fahrenheit" ${w.units === "fahrenheit" ? "selected" : ""}>Градусы Фаренгейта · °F</option></select></label>` : w.type === "clock" ? `<h2>Отображение времени</h2><label class="check"><input data-prop="seconds" type="checkbox" ${w.seconds ? "checked" : ""}>Показывать секунды</label><label class="check"><input data-prop="hour12" type="checkbox" ${w.hour12 ? "checked" : ""}>12-часовой формат</label>` : w.type === "photo" ? `<h2>Любимый кадр</h2><p class="small">PNG, JPG или WebP, до 30 МБ. Копия фото сохраняется в приложении.</p><button class="primary" id="choose-photo">Выбрать фотографию</button><label class="field" style="margin-top:18px">Размещение<select data-prop="fit"><option value="cover" ${w.fit === "cover" ? "selected" : ""}>Заполнить виджет</option><option value="contain" ${w.fit === "contain" ? "selected" : ""}>Показать фото целиком</option></select></label>` : w.type === "note" ? `<h2>Текст заметки</h2><textarea data-prop="text" rows="7" style="width:100%" placeholder="Запишите важное…">${esc(w.text)}</textarea><p class="hint">Также можно писать прямо в виджете.</p>` : w.type === "quote" ? `<h2>Цитата дня</h2><p>Новая фраза появляется автоматически каждый день. Интернет для этого не требуется.</p>` : w.type === "calendar" ? `<h2>Планы на каждый день</h2><p>Выберите день в календаре на рабочем столе и напишите заметку под ним.</p>${calendarMarkerPanel(w)}` : `<h2>Настройки виджета</h2>`}</div><button class="danger" id="remove-widget">Удалить виджет</button><span class="hint" style="margin-left:15px">Будут удалены и его записи</span>`;
 }
 function updateOverlay() {
   const u = state.update;
@@ -402,6 +402,19 @@ function renderWidget() {
   bind("#widget-open-update", () => api.edit(id));
   bind("#widget-photo", () => api.photo(id));
   bind("#retry-weather", () => fetchWeather(w, true));
+  const photo = document.querySelector(".photo-image");
+  if (photo) {
+    const rememberAspect = () => {
+      const photoAspect = photo.naturalWidth / photo.naturalHeight;
+      if (
+        Number.isFinite(photoAspect) &&
+        Math.abs(photoAspect - (w.photoAspect || 0)) > 0.0001
+      )
+        act(() => api.patch(id, { photoAspect }));
+    };
+    if (photo.complete) rememberAspect();
+    else photo.addEventListener("load", rememberAspect, { once: true });
+  }
   mountWidgetInteractions(w);
   bindNotes(w);
   dayPlanner.mount(w);
@@ -568,7 +581,7 @@ api.onState((s) => {
       preview.lastElementChild.style.color = w.accentText;
       root.querySelectorAll("[data-prop]").forEach((el) => {
         if (
-          ["background", "foreground", "accent"].includes(el.dataset.prop) &&
+          ["background", "accent"].includes(el.dataset.prop) &&
           el !== document.activeElement
         )
           el.value = w[el.dataset.prop];

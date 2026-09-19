@@ -160,6 +160,31 @@ module.exports = async ({
     );
     photo.photo = require("node:url").pathToFileURL(landscape).href;
     save();
+    await manager.webContents.executeJavaScript(
+      `window.widgetAPI.patch('${photo.id}',{style:'photo-edge',fit:'contain',photoAspect:1.2,width:360,height:300})`,
+    );
+    await wait(100);
+    await pwin.webContents.executeJavaScript(
+      `window.widgetAPI.resizeStep('${photo.id}',40,5)`,
+    );
+    await wait(100);
+    const fittedPhoto = store.data.widgets.find((w) => w.id === photo.id);
+    const fittedGeometry = await pwin.webContents.executeJavaScript(
+      `(()=>{const image=document.querySelector('.photo-image').getBoundingClientRect();return {innerWidth,innerHeight,imageWidth:image.width,imageHeight:image.height}})()`,
+    );
+    checks.push({
+      name: "contained photo and native window resize together without empty fields",
+      ok:
+        fittedPhoto.width === 400 &&
+        fittedPhoto.height === 333 &&
+        Math.abs(fittedPhoto.width / fittedPhoto.height - 1.2) < 0.002 &&
+        Math.abs(fittedGeometry.innerWidth - fittedGeometry.imageWidth) < 1 &&
+        Math.abs(fittedGeometry.innerHeight - fittedGeometry.imageHeight) < 1,
+      details: { fittedPhoto, fittedGeometry },
+    });
+    await manager.webContents.executeJavaScript(
+      `window.widgetAPI.patch('${photo.id}',{fit:'cover'})`,
+    );
     const { styles } = require("../src/widget-styles");
     for (const [type, options] of Object.entries(styles)) {
       const w = store.data.widgets.find((w) => w.type === type),

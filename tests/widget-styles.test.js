@@ -67,3 +67,28 @@ test("resize stays anchored and respects type-specific bounds", () => {
     height: 190,
   });
 });
+
+test("contained photos resize with their original aspect ratio", () => {
+  const photo = {
+    ...createWidget("photo"),
+    fit: "contain",
+    photoAspect: 3 / 4,
+    style: "photo-edge",
+    showTitle: false,
+    showBackground: false,
+    width: 300,
+    height: 400,
+  };
+  assert.deepEqual(resizeBounds(photo, 75, 10), {
+    width: 375,
+    height: 500,
+  });
+  assert.deepEqual(resizeBounds(photo, 10, 200), {
+    width: 450,
+    height: 600,
+  });
+  assert.deepEqual(resizeBounds(photo, 10000, 10000), {
+    width: 750,
+    height: 1000,
+  });
+});

@@ -880,12 +880,6 @@ p {
   --ui-onAccent: #111111;
   --ui-icon: #f5edfa;
 }
-.text-contrast-controls {
-  margin-bottom: 24px;
-}
-.text-contrast-controls .field {
-  max-width: 240px;
-}
 .marker-apply {
   color: var(--ui-text);
   font-size: 12px;

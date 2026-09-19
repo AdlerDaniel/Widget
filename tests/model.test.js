@@ -49,6 +49,20 @@ test("untrusted fields cannot replace ids, types or local photo paths", () => {
   assert.equal(p.width, 900);
   assert.equal(p.background, w.background);
 });
+test("photo aspect is validated and contain mode removes letterboxing on resize", () => {
+  let photo = patchWidget(createWidget("photo"), {
+    style: "photo-edge",
+    photoAspect: 3 / 4,
+    fit: "contain",
+  });
+  assert.deepEqual([photo.width, photo.height], [300, 400]);
+  photo = patchWidget(photo, { width: 450 });
+  assert.deepEqual([photo.width, photo.height], [450, 600]);
+  assert.equal(
+    patchWidget(photo, { photoAspect: 100 }).photoAspect,
+    photo.photoAspect,
+  );
+});
 test("disconnected monitors recover coordinates and negative monitor positions work", () => {
   const w = { ...createWidget("clock"), x: 3000, y: 3000 };
   const r = clampBounds(w, [{ x: 0, y: 0, width: 1920, height: 1080 }]);

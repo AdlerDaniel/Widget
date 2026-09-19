@@ -2,46 +2,54 @@
 const crypto = require("node:crypto");
 const { normalizeNotes, patchNotes } = require("./notes");
 const { validTheme } = require("./themes");
-const { validStyle, styleDefaults } = require("./widget-styles");
+const { validStyle, styleDefaults, resizeBounds } = require("./widget-styles");
 const { WIDGET_META } = require("./widget-meta");
 const { normalizePlanner, patchPlanner } = require("./day-planner");
 const TYPES = Object.keys(WIDGET_META);
 function createWidget(type, offset = 0) {
   if (!TYPES.includes(type)) throw Error("Неизвестный виджет");
-  return normalizePlanner(normalizeNotes({
-    id: crypto.randomUUID(),
-    type,
-    x: 80 + offset * 28,
-    y: 80 + offset * 28,
-    width: WIDGET_META[type].defaultSize[0],
-    height: WIDGET_META[type].defaultSize[1],
-    background: "#202839",
-    foreground: "#f4f6fc",
-    autoTextContrast: true,
-    accent: "#b9a3ff",
-    theme: "app",
-    opacity: 96,
-    widgetOpacity: 100,
-    fontSize: type === "quote" ? 18 : 16,
-    radius: 24,
-    title: "",
-    text: "",
-    photo: "",
-    fit: "cover",
-    city: "Москва",
-    latitude: 55.7522,
-    longitude: 37.6156,
-    units: "celsius",
-    hour12: false,
-    seconds: true,
-    locked: false,
-    style: type === "quote" ? "quote-landscape" : type === "day-planner" ? "day-planner" : "card",
-    showTitle: type !== "quote",
-    showBackground: true,
-    events: {},
-    eventMarkers: {},
-    markerAutoDeleteDays: 0,
-  }));
+  return normalizePlanner(
+    normalizeNotes({
+      id: crypto.randomUUID(),
+      type,
+      x: 80 + offset * 28,
+      y: 80 + offset * 28,
+      width: WIDGET_META[type].defaultSize[0],
+      height: WIDGET_META[type].defaultSize[1],
+      background: "#202839",
+      foreground: "#f4f6fc",
+      autoTextContrast: true,
+      accent: "#b9a3ff",
+      theme: "app",
+      opacity: 96,
+      widgetOpacity: 100,
+      fontSize: type === "quote" ? 18 : 16,
+      radius: 24,
+      title: "",
+      text: "",
+      photo: "",
+      photoAspect: null,
+      fit: "cover",
+      city: "Москва",
+      latitude: 55.7522,
+      longitude: 37.6156,
+      units: "celsius",
+      hour12: false,
+      seconds: true,
+      locked: false,
+      style:
+        type === "quote"
+          ? "quote-landscape"
+          : type === "day-planner"
+            ? "day-planner"
+            : "card",
+      showTitle: type !== "quote",
+      showBackground: true,
+      events: {},
+      eventMarkers: {},
+      markerAutoDeleteDays: 0,
+    }),
+  );
 }
 function patchWidget(widget, patch) {
   const out = { ...widget };
@@ -58,8 +66,14 @@ function patchWidget(widget, patch) {
       out[key] = patch[key];
       out.theme = "custom";
     }
-  if (/^#[0-9a-f]{6}$/i.test(patch.foreground || ""))
-    out.foreground = patch.foreground;
+  out.autoTextContrast = true;
+  if (
+    widget.type === "photo" &&
+    Number.isFinite(patch.photoAspect) &&
+    patch.photoAspect >= 0.24 &&
+    patch.photoAspect <= 5
+  )
+    out.photoAspect = patch.photoAspect;
   for (const [key, min, max] of [
     ["opacity", 25, 100],
     ["widgetOpacity", 25, 100],
@@ -71,23 +85,39 @@ function patchWidget(widget, patch) {
     if (Number.isFinite(patch[key]))
       out[key] = Math.min(max, Math.max(min, patch[key]));
   const { minSize, maxSize } = WIDGET_META[widget.type];
-  for (const [key, index] of [
-    ["width", 0],
-    ["height", 1],
-  ]) {
-    const value = Number.isFinite(patch[key]) ? patch[key] : out[key];
-    out[key] = Math.min(maxSize[index], Math.max(minSize[index], value));
-  }
+  const requestedWidth = Number.isFinite(patch.width)
+    ? Math.min(maxSize[0], Math.max(minSize[0], patch.width))
+    : out.width;
+  const requestedHeight = Number.isFinite(patch.height)
+    ? Math.min(maxSize[1], Math.max(minSize[1], patch.height))
+    : out.height;
   for (const key of [
     "locked",
     "seconds",
     "hour12",
     "showTitle",
     "showBackground",
-    "autoTextContrast",
   ])
     if (typeof patch[key] === "boolean") out[key] = patch[key];
   if (["cover", "contain"].includes(patch.fit)) out.fit = patch.fit;
+  if (
+    out.type === "photo" &&
+    out.fit === "contain" &&
+    out.style !== "photo-round" &&
+    Number.isFinite(out.photoAspect)
+  )
+    Object.assign(
+      out,
+      resizeBounds(
+        { ...out, width: widget.width, height: widget.height },
+        requestedWidth - widget.width,
+        requestedHeight - widget.height,
+      ),
+    );
+  else {
+    out.width = requestedWidth;
+    out.height = requestedHeight;
+  }
   if (["celsius", "fahrenheit"].includes(patch.units)) out.units = patch.units;
   if (
     widget.type === "calendar" &&
