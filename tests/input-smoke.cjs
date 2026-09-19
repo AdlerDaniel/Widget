@@ -3,6 +3,10 @@ module.exports = async ({ manager, store, windows, desktop, checks, save }) => {
   const { screen } = require("electron"),
     koffi = require("koffi"),
     u = koffi.load("user32.dll");
+  const setCursorPos = u.func("bool __stdcall SetCursorPos(int x, int y)"),
+    mouseEvent = u.func(
+      "void __stdcall mouse_event(uint32 flags, uint32 dx, uint32 dy, uint32 data, uintptr_t extra)",
+    );
   const Rect = koffi.struct("InputTestRect", {
     left: "long",
     top: "long",
@@ -36,10 +40,17 @@ module.exports = async ({ manager, store, windows, desktop, checks, save }) => {
         win = windows.get(w.id),
         selector = type === "note" ? "#note" : "#event",
         js = (s) => win.webContents.executeJavaScript(s);
-      await js(
-        `document.querySelector('${selector}').focus();document.querySelector('${selector}').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0}));window.liveEditor=document.querySelector('${selector}');`,
+      const point = await js(
+          `(()=>{const editor=document.querySelector('${selector}'),r=editor.getBoundingClientRect();window.liveEditor=editor;return {x:(r.left+r.right)/2,y:(r.top+r.bottom)/2}})()`,
+        ),
+        [windowX, windowY] = win.getPosition();
+      setCursorPos(
+        Math.round(windowX + point.x),
+        Math.round(windowY + point.y),
       );
-      await wait(200);
+      mouseEvent(0x0002, 0, 0, 0, 0);
+      mouseEvent(0x0004, 0, 0, 0, 0);
+      await wait(300);
       const info = { cbSize: koffi.sizeof(Info) },
         h = win.getNativeWindowHandle().readBigUInt64LE();
       gui(0, info);

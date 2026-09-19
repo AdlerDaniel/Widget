@@ -63,7 +63,8 @@ module.exports = async ({
         `getComputedStyle(document.querySelector('#widget-edit')).opacity==='0'`,
       ),
     });
-    const first = store.data.widgets.find((w) => w.id === note.id).activeNoteId;
+    const first = store.data.widgets.find((w) => w.id === note.id).activeNoteId,
+      firstText = await js(`document.querySelector('#note').value`);
     await click("#note-add");
     const second = store.data.widgets.find(
       (w) => w.id === note.id,
@@ -100,7 +101,7 @@ module.exports = async ({
     checks.push({
       name: "switching notes restores original text without replacing it",
       ok: await js(
-        `document.querySelector('#note').value==='Заметка сохранена ✓'`,
+        `document.querySelector('#note').value===${JSON.stringify(firstText)}`,
       ),
     });
     await click("#notes-list-toggle");
@@ -149,7 +150,7 @@ module.exports = async ({
       ok:
         store.data.widgets.find((w) => w.id === note.id).notes.length === 1 &&
         (await js(
-          `document.querySelector('#note').value==='Заметка сохранена ✓'`,
+          `document.querySelector('#note').value===${JSON.stringify(firstText)}`,
         )),
     });
     const cal = store.data.widgets.find((w) => w.type === "calendar"),
@@ -228,6 +229,10 @@ module.exports = async ({
         `!document.querySelector('#event-marker-style')&&!document.querySelector('#event-marker-color')`,
       ),
     });
+    await manager.webContents.executeJavaScript(
+      `window.widgetAPI.patch('${cal.id}',{markerAutoDeleteDays:0})`,
+    );
+    await wait(100);
     await cj(`document.querySelectorAll('[data-date]')[15].click()`);
     checks.push({
       name: "selected ring date has no rectangle",

@@ -26,6 +26,12 @@ module.exports = async ({
       );
       await wait(700);
     } else {
+      for (
+        let attempt = 0;
+        attempt < 20 && windows.size !== store.data.widgets.length;
+        attempt++
+      )
+        await wait(150);
       checks.push({
         name: "restore after process restart",
         ok:
@@ -37,7 +43,14 @@ module.exports = async ({
       name: "add through catalog",
       ok: store.data.widgets.length > 0,
     });
-    for (const type of ["clock", "weather", "photo", "calendar", "quote", "day-planner"])
+    for (const type of [
+      "clock",
+      "weather",
+      "photo",
+      "calendar",
+      "quote",
+      "day-planner",
+    ])
       if (!store.data.widgets.find((w) => w.type === type)) {
         const w = createWidget(type);
         if (type === "calendar") w.events["2026-09-13"] = "Тестовая запись";
