@@ -277,6 +277,9 @@
   opacity: 0.55;
   font-variant-numeric: tabular-nums;
 }
+.planner-tick.is-first span {
+  top: 1px;
+}
 .planner-now {
   position: absolute;
   left: 45px;
@@ -312,6 +315,8 @@
   cursor: grab;
   touch-action: none;
   font-size: clamp(10px, 3cqw, 12px);
+  container-name: planner-task-block;
+  container-type: size;
 }
 .planner-block:active {
   cursor: grabbing;
@@ -350,7 +355,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.planner-block[style*="height:24px"] .planner-block-time,
 .planner-block.is-point .planner-block-time {
   display: none;
 }
@@ -543,6 +547,16 @@
   .planner-task-open {
     font-size: 11px;
   }
+  .planner-block-time {
+    display: none;
+  }
+}
+@container planner-task-block (max-height: 34px) {
+  .planner-block-time {
+    display: none;
+  }
+}
+@container planner-task-block (max-width: 82px) {
   .planner-block-time {
     display: none;
   }

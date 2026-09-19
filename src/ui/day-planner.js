@@ -2,7 +2,7 @@
 
 const dayPlanner = (() => {
   const palette = ["violet", "blue", "teal", "green", "amber", "coral", "pink"];
-  const pxPerMinute = 0.8;
+  const defaultMinuteScale = 0.8;
   let selected = null;
   let expanded = false;
   let initialized = false;
@@ -18,6 +18,25 @@ const dayPlanner = (() => {
 
   const timeMinutes = (value) =>
     Number(value.slice(0, 2)) * 60 + Number(value.slice(3));
+  function timelineScale(w, blocks, start, end) {
+    const availableHeight = Math.max(
+      120,
+      (Number.isFinite(w.height) ? w.height : 440) -
+        (w.showTitle === false ? 130 : 167),
+    );
+    const rangeMinutes = Math.max(30, end - start);
+    const longestRange = blocks.reduce(
+      (longest, block) =>
+        block.task.type === "range"
+          ? Math.max(longest, block.end - block.start)
+          : longest,
+      0,
+    );
+    let scale = (availableHeight * 1.7) / rangeMinutes;
+    if (longestRange >= 180)
+      scale = Math.min(scale, (availableHeight * 0.58) / longestRange);
+    return Math.round(Math.max(0.12, Math.min(1, scale)) * 1000) / 1000;
+  }
   const clock = (value) =>
     `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
   const today = () => dateKey(new Date());
@@ -131,24 +150,30 @@ const dayPlanner = (() => {
           ),
         })),
     );
+    const minuteScale = timelineScale(w, blocks, start, end);
     const gridStep = w.plannerGridStep || 30;
+    const visualStep = Math.max(
+      gridStep,
+      minuteScale < 0.18 ? 120 : minuteScale < 0.34 ? 60 : gridStep,
+    );
+    const labelEvery = Math.max(1, Math.ceil(26 / (60 * minuteScale)));
     const ticks = [];
-    for (let minute = start; minute <= end; minute += gridStep)
+    for (let minute = start; minute <= end; minute += visualStep)
       ticks.push(
-        `<div class="planner-tick ${minute % 60 === 0 ? "is-hour" : ""}" style="top:${(minute - start) * pxPerMinute}px">${minute % 60 === 0 ? `<span>${clock(minute)}</span>` : ""}</div>`,
+        `<div class="planner-tick ${minute % 60 === 0 ? "is-hour" : ""} ${minute === start ? "is-first" : ""}" style="top:${(minute - start) * minuteScale}px">${minute % 60 === 0 && (minute / 60 - firstHour) % labelEvery === 0 ? `<span>${clock(minute)}</span>` : ""}</div>`,
       );
     const now = new Date();
     const current = now.getHours() * 60 + now.getMinutes();
     const nowLine =
       selected === today() && current >= start && current <= end
-        ? `<div class="planner-now" style="top:${(current - start) * pxPerMinute}px"><i></i></div>`
+        ? `<div class="planner-now" style="top:${(current - start) * minuteScale}px"><i></i></div>`
         : "";
     const completed = tasks.filter((task) => task.completed);
-    return `<div class="planner-day-body"><div class="planner-all-day"><span>На день</span><div>${anytime.length ? anytime.map(row).join("") : '<span class="planner-muted">Свободно</span>'}</div></div>${outside.length ? `<div class="planner-outside"><span>Вне шкалы</span>${outside.map(row).join("")}</div>` : ""}${w.plannerShowCompleted !== false && completed.length ? `<div class="planner-day-completed"><button type="button" class="planner-completed-head" id="planner-completed">Выполнено · ${completed.length} <span>${completedOpen ? "⌃" : "⌄"}</span></button>${completedOpen ? completed.map(row).join("") : ""}</div>` : ""}<div class="planner-timeline planner-scroll" id="planner-timeline"><div class="planner-grid planner-interactive" id="planner-grid" style="height:${(end - start) * pxPerMinute}px" data-start="${start}" data-end="${end}">${ticks.join("")}${blocks
+    return `<div class="planner-day-body"><div class="planner-all-day"><span>На день</span><div>${anytime.length ? anytime.map(row).join("") : '<span class="planner-muted">Свободно</span>'}</div></div>${outside.length ? `<div class="planner-outside"><span>Вне шкалы</span>${outside.map(row).join("")}</div>` : ""}${w.plannerShowCompleted !== false && completed.length ? `<div class="planner-day-completed"><button type="button" class="planner-completed-head" id="planner-completed">Выполнено · ${completed.length} <span>${completedOpen ? "⌃" : "⌄"}</span></button>${completedOpen ? completed.map(row).join("") : ""}</div>` : ""}<div class="planner-timeline planner-scroll" id="planner-timeline"><div class="planner-grid planner-interactive ${minuteScale < 0.4 ? "is-condensed" : ""}" id="planner-grid" style="height:${(end - start) * minuteScale}px" data-start="${start}" data-end="${end}" data-minute-scale="${minuteScale}">${ticks.join("")}${blocks
       .map((block) => {
         const task = block.task;
-        const top = (block.start - start) * pxPerMinute;
-        const height = Math.max(22, (block.end - block.start) * pxPerMinute);
+        const top = (block.start - start) * minuteScale;
+        const height = Math.max(22, (block.end - block.start) * minuteScale);
         const width = 100 / block.columns;
         return `<div class="planner-block planner-interactive planner-color-${task.color} ${task.type === "time" ? "is-point" : ""} ${overdue(task) ? "is-overdue" : ""}" data-planner-block="${esc(task.id)}" title="${esc(task.title)} · ${esc(taskTime(task))}" style="top:${top}px;height:${height}px;left:calc(48px + (100% - 48px) * ${block.column / block.columns});width:calc((100% - 48px) * ${width / 100} - 3px)"><input type="checkbox" data-planner-toggle="${esc(task.id)}" aria-label="Выполнить ${esc(task.title)}"><span class="planner-block-title">${esc(task.title)}</span><span class="planner-block-time">${esc(taskTime(task))}</span>${task.type === "range" ? '<span class="planner-resize planner-interactive" data-planner-resize="true" aria-label="Изменить окончание"></span>' : ""}</div>`;
       })
@@ -269,6 +294,7 @@ const dayPlanner = (() => {
   function bindPointer(w) {
     const grid = document.querySelector("#planner-grid");
     if (!grid) return;
+    const minuteScale = Number(grid.dataset.minuteScale) || defaultMinuteScale;
     let gesture = null;
     const slot = (event) => {
       const y = event.clientY - grid.getBoundingClientRect().top;
@@ -276,7 +302,7 @@ const dayPlanner = (() => {
         Number(grid.dataset.start),
         Math.min(
           Number(grid.dataset.end) - 30,
-          Number(grid.dataset.start) + Math.floor(y / (pxPerMinute * 30)) * 30,
+          Number(grid.dataset.start) + Math.floor(y / (minuteScale * 30)) * 30,
         ),
       );
     };
@@ -308,7 +334,7 @@ const dayPlanner = (() => {
       gesture.moved ||= Math.abs(event.clientY - gesture.y) > 4;
       if (!gesture.moved) return;
       const delta =
-        Math.round((event.clientY - gesture.y) / (pxPerMinute * 30)) * 30;
+        Math.round((event.clientY - gesture.y) / (minuteScale * 30)) * 30;
       gesture.last = gesture.kind === "create" ? slot(event) : delta;
       const selection = document.querySelector("#planner-selection");
       const tip = document.querySelector("#planner-drag-tip");
@@ -343,10 +369,10 @@ const dayPlanner = (() => {
       }
       const start = Number(grid.dataset.start);
       selection.hidden = false;
-      selection.style.top = `${Math.max(0, (from - start) * pxPerMinute)}px`;
-      selection.style.height = `${Math.max(24, (to - from) * pxPerMinute)}px`;
+      selection.style.top = `${Math.max(0, (from - start) * minuteScale)}px`;
+      selection.style.height = `${Math.max(24, (to - from) * minuteScale)}px`;
       tip.hidden = false;
-      tip.style.top = `${Math.max(0, (from - start) * pxPerMinute - 24)}px`;
+      tip.style.top = `${Math.max(0, (from - start) * minuteScale - 24)}px`;
       tip.textContent = `${clock(from)}–${clock(to)}`;
     };
     grid.onpointerup = (event) => {
@@ -437,7 +463,9 @@ const dayPlanner = (() => {
       rerender();
       const picker = document.querySelector("#planner-date-input");
       picker?.focus();
-      try { picker?.showPicker(); } catch {}
+      try {
+        picker?.showPicker();
+      } catch {}
     });
     const dateInput = document.querySelector("#planner-date-input");
     if (dateInput)
@@ -460,20 +488,18 @@ const dayPlanner = (() => {
       completedOpen = !completedOpen;
       rerender();
     });
-    root
-      .querySelectorAll("[data-planner-toggle]")
-      .forEach(
-        (input) =>
-          (input.onchange = () =>
-            act(() =>
-              api.patch(id, {
-                plannerAction: {
-                  type: "toggle",
-                  id: input.dataset.plannerToggle,
-                },
-              }),
-            )),
-      );
+    root.querySelectorAll("[data-planner-toggle]").forEach(
+      (input) =>
+        (input.onchange = () =>
+          act(() =>
+            api.patch(id, {
+              plannerAction: {
+                type: "toggle",
+                id: input.dataset.plannerToggle,
+              },
+            }),
+          )),
+    );
     root.querySelectorAll("[data-planner-open]").forEach(
       (button) =>
         (button.onclick = () =>
@@ -488,10 +514,14 @@ const dayPlanner = (() => {
     if (timeline) {
       if (autoScroll && selected === today()) {
         const now = new Date();
+        const minuteScale =
+          Number(
+            document.querySelector("#planner-grid")?.dataset.minuteScale,
+          ) || defaultMinuteScale;
         timeline.scrollTop = Math.max(
           0,
           (now.getHours() * 60 + now.getMinutes() - range(w)[0] * 60) *
-            pxPerMinute -
+            minuteScale -
             90,
         );
       } else timeline.scrollTop = timelineScroll;

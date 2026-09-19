@@ -75,7 +75,8 @@ app
     const grid = document.querySelector('#planner-grid');
     grid.setPointerCapture = () => {};
     grid.hasPointerCapture = () => false;
-    const y = grid.getBoundingClientRect().top + (14 * 60 - Number(grid.dataset.start)) * .8;
+    const scale = Number(grid.dataset.minuteScale);
+    const y = grid.getBoundingClientRect().top + (14 * 60 - Number(grid.dataset.start)) * scale;
     grid.onpointerdown({ button: 0, target: grid, clientY: y, pointerId: 1, preventDefault() {}, stopPropagation() {} });
     grid.onpointerup({ target: grid, clientY: y, pointerId: 1 });
   })()`);
@@ -98,8 +99,9 @@ app
     grid.setPointerCapture = () => {};
     grid.hasPointerCapture = () => false;
     const top = grid.getBoundingClientRect().top;
-    const from = top + (15 * 60 - Number(grid.dataset.start)) * .8;
-    const to = top + (17 * 60 - Number(grid.dataset.start)) * .8;
+    const scale = Number(grid.dataset.minuteScale);
+    const from = top + (15 * 60 - Number(grid.dataset.start)) * scale;
+    const to = top + (17 * 60 - Number(grid.dataset.start)) * scale;
     grid.onpointerdown({ button: 0, target: grid, clientY: from, pointerId: 2, preventDefault() {}, stopPropagation() {} });
     grid.onpointermove({ clientY: to });
     grid.onpointerup({ target: grid, clientY: to, pointerId: 2 });
@@ -145,8 +147,9 @@ app
     const block = document.querySelector('[data-planner-block="${work.id}"]');
     const y = block.getBoundingClientRect().top + 8;
     grid.onpointerdown({ button: 0, target: block, clientY: y, pointerId: 3, preventDefault() {}, stopPropagation() {} });
-    grid.onpointermove({ clientY: y + 48 });
-    grid.onpointerup({ target: block, clientY: y + 48, pointerId: 3 });
+    const scale = Number(grid.dataset.minuteScale);
+    grid.onpointermove({ clientY: y + scale * 60 });
+    grid.onpointerup({ target: block, clientY: y + scale * 60, pointerId: 3 });
   })()`);
     await delay(120);
     assert.deepEqual(
@@ -164,14 +167,65 @@ app
     const handle = document.querySelector('[data-planner-block="${work.id}"] [data-planner-resize]');
     const y = handle.getBoundingClientRect().top + 2;
     grid.onpointerdown({ button: 0, target: handle, clientY: y, pointerId: 4, preventDefault() {}, stopPropagation() {} });
-    grid.onpointermove({ clientY: y + 24 });
-    grid.onpointerup({ target: handle, clientY: y + 24, pointerId: 4 });
+    const scale = Number(grid.dataset.minuteScale);
+    grid.onpointermove({ clientY: y + scale * 30 });
+    grid.onpointerup({ target: handle, clientY: y + scale * 30, pointerId: 4 });
   })()`);
     await delay(120);
     assert.equal(
       widget.plannerTasks.find((task) => task.id === work.id).endTime,
       "19:00",
     );
+    await js(
+      `window.widgetAPI.patch('${widget.id}', { plannerAction: { type: 'add', task: { title: 'Длинная задача', date: '${work.date}', type: 'range', startTime: '09:00', endTime: '19:00' } } })`,
+    );
+    await delay(100);
+    const longTask = widget.plannerTasks.find(
+      (task) => task.title === "Длинная задача",
+    );
+    const out = path.join(__dirname, "../test-output");
+    fs.mkdirSync(out, { recursive: true });
+    const responsiveGeometry = [];
+    for (const [width, height] of [
+      [280, 300],
+      [360, 440],
+      [600, 700],
+    ]) {
+      window.setSize(width, height);
+      await js(
+        `window.widgetAPI.patch('${widget.id}',{width:${width},height:${height}})`,
+      );
+      await delay(100);
+      responsiveGeometry.push(
+        await js(`(() => {
+          const grid=document.querySelector('#planner-grid');
+          const timeline=document.querySelector('#planner-timeline');
+          const block=document.querySelector('[data-planner-block="${longTask.id}"]');
+          return {width:${width},height:${height},scale:Number(grid.dataset.minuteScale),gridHeight:grid.getBoundingClientRect().height,timelineHeight:timeline.getBoundingClientRect().height,blockHeight:block.getBoundingClientRect().height,labelCount:grid.querySelectorAll('.planner-tick span').length,overflow:document.querySelector('.planner-content').scrollWidth>document.querySelector('.planner-content').clientWidth};
+        })()`),
+      );
+      fs.writeFileSync(
+        path.join(out, `day-planner-adaptive-${width}x${height}.png`),
+        (await window.webContents.capturePage()).toPNG(),
+      );
+    }
+    assert.ok(
+      responsiveGeometry.every(
+        (item) =>
+          item.blockHeight <= item.timelineHeight * 0.72 &&
+          item.labelCount >= 3 &&
+          !item.overflow,
+      ),
+      "long ranges stay compact and readable at every widget size",
+    );
+    assert.ok(
+      responsiveGeometry[0].scale < responsiveGeometry[1].scale &&
+        responsiveGeometry[1].scale < responsiveGeometry[2].scale,
+      "timeline scale grows with available widget height",
+    );
+    window.setSize(360, 440);
+    await js(`window.widgetAPI.patch('${widget.id}',{width:360,height:440})`);
+    await delay(100);
     await js(`(() => {
     const grid = document.querySelector('#planner-grid');
     grid.setPointerCapture = () => {};
@@ -227,8 +281,6 @@ app
     await delay(100);
     assert.equal(widget.plannerDraft, null);
 
-    const out = path.join(__dirname, "../test-output");
-    fs.mkdirSync(out, { recursive: true });
     for (const [style, theme] of [
       ["day-planner", "purple-dark"],
       ["card", "purple-light"],
@@ -256,7 +308,7 @@ app
     }
     console.log(
       "day planner renderer scenarios passed",
-      JSON.stringify(geometry),
+      JSON.stringify({ overlap: geometry, responsive: responsiveGeometry }),
     );
     window.destroy();
     app.quit();
