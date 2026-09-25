@@ -591,7 +591,7 @@ p {
   background: var(--bg);
   border: 1px solid color-mix(in srgb, var(--fg) 16%, transparent);
   border-radius: var(--radius);
-  padding: 18px;
+  padding: clamp(14px, min(5cqw, 7cqh), 30px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -602,9 +602,10 @@ p {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  height: 25px;
+  height: clamp(25px, 4cqh, 42px);
   flex-shrink: 0;
-  margin-bottom: 12px;
+  margin-bottom: clamp(10px, 2cqh, 20px);
+  font-size: clamp(var(--font-size), min(4.4cqw, 6cqh), 28px);
   user-select: none;
   cursor: grab;
   touch-action: none;
@@ -637,13 +638,19 @@ p {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  font-size: clamp(
+    var(--font-size),
+    min(4.4cqw, 6cqh),
+    calc(var(--font-size) * 1.75)
+  );
 }
 .clock-content {
   justify-content: center;
   align-items: center;
 }
 .clock-time {
-  font-size: 3.2em;
+  font-size: clamp(3.2em, min(18cqw, 26cqh), 9em);
   font-weight: 350;
   letter-spacing: -3px;
   font-variant-numeric: tabular-nums;
@@ -671,8 +678,9 @@ p {
   height: 100%;
   font-size: 1em;
 }
-.note-area:focus {
-  outline: none;
+.note-area:focus-visible {
+  outline: 2px solid var(--ui-accent);
+  outline-offset: 2px;
 }
 .note-area::placeholder {
   color: var(--fg);
@@ -706,16 +714,19 @@ p {
   font-size: 0.8em;
 }
 .photo-placeholder span {
-  font-size: 38px;
+  font-size: clamp(38px, 10cqw, 90px);
   color: var(--accent-text);
 }
 .weather-temp {
-  font-size: 3.5em;
+  font-size: clamp(3.5em, min(19cqw, 29cqh), 9em);
   font-weight: 350;
   letter-spacing: -3px;
 }
+.widget-type-weather .widget-content {
+  justify-content: center;
+}
 .weather-symbol {
-  font-size: 3em;
+  font-size: clamp(3em, min(16cqw, 24cqh), 7em);
   color: var(--accent-text);
 }
 .weather-desc {
@@ -770,7 +781,7 @@ p {
   margin-bottom: 7px;
 }
 .day {
-  height: 29px;
+  height: clamp(29px, 6cqh, 64px);
   background: transparent;
   color: var(--fg);
   font-size: 0.72em;
@@ -823,8 +834,9 @@ p {
   min-height: 24px;
   line-height: 1.45;
 }
-.calendar-note textarea:focus {
-  outline: 0;
+.calendar-note textarea:focus-visible {
+  outline: 2px solid var(--ui-accent);
+  outline-offset: 2px;
 }
 .calendar-note textarea::placeholder {
   color: var(--fg);

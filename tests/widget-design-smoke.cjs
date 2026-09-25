@@ -207,6 +207,105 @@ module.exports = async ({
           );
       }
     }
+    const { WIDGET_META } = require("../src/widget-meta");
+    const uiAudit = [];
+    for (const [type, options] of Object.entries(styles)) {
+      const sample = store.data.widgets.find((w) => w.type === type);
+      const sampleWindow = windows.get(sample.id);
+      const meta = WIDGET_META[type];
+      const sizes = [
+        ["minimum", ...meta.minSize],
+        ["default", ...meta.defaultSize],
+        ["maximum", ...meta.maxSize],
+      ];
+      for (const theme of ["purple-dark", "purple-light"]) {
+        for (const option of options) {
+          for (const [size, width, height] of sizes) {
+            await manager.webContents.executeJavaScript(
+              `window.widgetAPI.patch('${sample.id}',{style:'${option.id}',theme:'${theme}',showTitle:${option.id === "card"},showBackground:${option.id !== "bare"},width:${width},height:${height}})`,
+            );
+            await wait(45);
+            const geometry = await sampleWindow.webContents.executeJavaScript(
+              `(()=>{const widget=document.querySelector('.widget'),content=document.querySelector('.widget-content'),wr=widget.getBoundingClientRect(),cr=content?.getBoundingClientRect(),visible=el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return s.display!=='none'&&s.visibility!=='hidden'&&r.width>0&&r.height>0},outside=[...document.querySelectorAll('button,input,textarea,.widget-title,.clock-time,.clock-date,.weather-temp,.weather-symbol,.weather-desc,.weather-detail,.calendar-nav,.weekdays,.days,.calendar-note,.quote-text,.planner-head,.planner-footer')].filter(visible).filter(el=>{const r=el.getBoundingClientRect();return r.left<wr.left-1||r.right>wr.right+1||r.top<wr.top-1||r.bottom>wr.bottom+1}).map(el=>el.id||el.className||el.tagName),unnamed=[...document.querySelectorAll('button,input,textarea')].filter(visible).filter(el=>!(el.getAttribute('aria-label')||el.getAttribute('title')||el.textContent.trim()||el.labels?.length)).map(el=>el.id||el.className||el.tagName);return {viewport:{width:innerWidth,height:innerHeight},widget:{width:wr.width,height:wr.height},content:cr&&{width:cr.width,height:cr.height,scrollWidth:content.scrollWidth,clientWidth:content.clientWidth,scrollHeight:content.scrollHeight,clientHeight:content.clientHeight},documentOverflow:document.documentElement.scrollWidth>innerWidth+1||document.documentElement.scrollHeight>innerHeight+1,horizontalOverflow:!!content&&content.scrollWidth>content.clientWidth+1,outside,unnamed}})()`,
+            );
+            uiAudit.push({
+              type,
+              style: option.id,
+              theme,
+              size,
+              width,
+              height,
+              ...geometry,
+              ok:
+                !geometry.documentOverflow &&
+                !geometry.horizontalOverflow &&
+                geometry.outside.length === 0 &&
+                geometry.unnamed.length === 0,
+            });
+          }
+        }
+      }
+    }
+    fs.writeFileSync(
+      path.join(out, "ui-audit.json"),
+      JSON.stringify(uiAudit, null, 2),
+    );
+    const auditFailures = uiAudit.filter((item) => !item.ok);
+    checks.push({
+      name: "all widget styles fit minimum default and maximum windows in light and dark themes",
+      ok: auditFailures.length === 0,
+      details: {
+        scenarios: uiAudit.length,
+        failures: auditFailures.slice(0, 20),
+      },
+    });
+    for (const type of [
+      "clock",
+      "note",
+      "weather",
+      "calendar",
+      "day-planner",
+    ]) {
+      const sample = store.data.widgets.find((w) => w.type === type);
+      const sampleWindow = windows.get(sample.id);
+      const sizes =
+        type === "calendar"
+          ? [
+              [300, 400],
+              [700, 800],
+            ]
+          : [
+              [280, 300],
+              [600, 700],
+            ];
+      const measurements = [];
+      for (const [width, height] of sizes) {
+        await manager.webContents.executeJavaScript(
+          `window.widgetAPI.patch('${sample.id}',{style:'card',width:${width},height:${height}})`,
+        );
+        await wait(100);
+        measurements.push(
+          await sampleWindow.webContents.executeJavaScript(
+            `(()=>{const content=document.querySelector('.widget-content'),widget=document.querySelector('.widget'),r=content.getBoundingClientRect(),outer=widget.getBoundingClientRect();return {font:parseFloat(getComputedStyle(content).fontSize),width:r.width,height:r.height,inside:r.right<=outer.right+1&&r.bottom<=outer.bottom+1,overflow:content.scrollWidth>content.clientWidth+1}})()`,
+          ),
+        );
+        if (width > 500)
+          fs.writeFileSync(
+            path.join(out, type + "-responsive-large.png"),
+            (await sampleWindow.webContents.capturePage()).toPNG(),
+          );
+      }
+      checks.push({
+        name: type + " content scales with widget size and stays inside",
+        ok:
+          measurements[1].font > measurements[0].font * 1.25 &&
+          measurements[0].inside &&
+          measurements[1].inside &&
+          !measurements[0].overflow &&
+          !measurements[1].overflow,
+        details: measurements,
+      });
+    }
     const weatherWidget = store.data.widgets.find((w) => w.type === "weather");
     const weatherWindow = windows.get(weatherWidget.id);
     const staleGeometry = await weatherWindow.webContents.executeJavaScript(
@@ -497,6 +596,29 @@ module.exports = async ({
       path.join(out, "style-picker.png"),
       (await manager.webContents.capturePage()).toPNG(),
     );
+    manager.setSize(850, 650);
+    await wait(120);
+    const managerAudit = [];
+    for (const page of ["catalog", "mine", "settings"]) {
+      await manager.webContents.executeJavaScript(
+        `document.querySelector('[data-nav="${page}"]').click()`,
+      );
+      await wait(100);
+      const geometry = await manager.webContents.executeJavaScript(
+        `(()=>{const root=document.documentElement,body=document.body,main=document.querySelector('.main');return {viewport:{width:innerWidth,height:innerHeight},documentWidth:root.scrollWidth,bodyWidth:body.scrollWidth,mainWidth:main?.scrollWidth,horizontalOverflow:root.scrollWidth>innerWidth+1||body.scrollWidth>innerWidth+1}})()`,
+      );
+      managerAudit.push({ page, ...geometry });
+      fs.writeFileSync(
+        path.join(out, "manager-" + page + "-minimum.png"),
+        (await manager.webContents.capturePage()).toPNG(),
+      );
+    }
+    checks.push({
+      name: "manager pages fit their minimum window without horizontal overflow",
+      ok: managerAudit.every((item) => !item.horizontalOverflow),
+      details: managerAudit,
+    });
+    manager.setSize(1140, 820);
     checks.push({
       name: "widget styles and flags persist on disk",
       ok:

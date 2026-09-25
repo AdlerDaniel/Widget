@@ -37,7 +37,7 @@
   background: color-mix(in srgb, var(--fg) 9%, transparent);
 }
 #planner-date {
-  font-size: clamp(12px, 3.8cqw, 16px);
+  font-size: clamp(12px, 3.8cqw, 22px);
   font-weight: 650;
   text-align: left;
   white-space: nowrap;
@@ -118,7 +118,7 @@
   min-width: 0;
   max-width: calc(100% - 24px);
   line-height: 1.35;
-  font-size: clamp(11px, 3.5cqw, 14px);
+  font-size: clamp(11px, 3.5cqw, 21px);
 }
 .planner-task-open:hover {
   color: var(--accent-text);
@@ -314,7 +314,7 @@
   color: var(--fg);
   cursor: grab;
   touch-action: none;
-  font-size: clamp(10px, 3cqw, 12px);
+  font-size: clamp(10px, 3cqw, 18px);
   container-name: planner-task-block;
   container-type: size;
 }

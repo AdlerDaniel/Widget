@@ -67,9 +67,9 @@
   background: color-mix(in srgb, currentColor 7%, transparent);
   color: inherit;
   border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
-  padding: 5px 8px;
+  padding: clamp(5px, 1cqh, 10px) clamp(8px, 1.3cqw, 15px);
   border-radius: 7px;
-  font-size: 11px;
+  font-size: clamp(11px, 0.72em, 18px);
   line-height: 1.2;
 }
 .notes-toolbar button:hover,
@@ -102,11 +102,11 @@
   justify-content: space-between;
 }
 .note-actions span {
-  font-size: 9px;
+  font-size: clamp(9px, 0.62em, 15px);
   opacity: 0.65;
 }
 .note-actions #note-delete {
-  font-size: 10px;
+  font-size: clamp(10px, 0.7em, 17px);
 }
 .notes-list {
   overflow-y: auto;
@@ -341,7 +341,7 @@
   border-radius: var(--radius);
 }
 .widget-style-clock-digital .clock-time {
-  font-size: clamp(30px, 18cqw, 150px) !important;
+  font-size: clamp(30px, min(18cqw, 28cqh), 150px) !important;
   color: var(--accent-text);
   font-weight: 600;
   letter-spacing: -0.055em;
@@ -471,7 +471,7 @@
   margin-top: 15px;
 }
 .widget-style-calendar-planner .day {
-  height: 32px;
+  height: clamp(32px, 6.5cqh, 68px);
 }
 .widget-style-quote-landscape {
   background: linear-gradient(
@@ -556,8 +556,8 @@
   fill: color-mix(in srgb, var(--accent-text) 38%, var(--bg));
 }
 .weather-art {
-  width: 130px;
-  height: 110px;
+  width: clamp(100px, 28cqw, 230px);
+  height: clamp(85px, 23cqw, 190px);
   display: block;
 }
 .widget-style-weather-sky {

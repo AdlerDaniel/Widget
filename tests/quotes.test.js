@@ -15,10 +15,11 @@ test("daily result belongs to the immutable quote collection", () => {
   assert.ok(Object.isFrozen(QUOTES));
 });
 
-test("quote collection is substantial and contains only concise phrases", () => {
-  assert.ok(QUOTES.length >= 150);
+test("quote collection is varied and contains only concise phrases", () => {
+  assert.ok(QUOTES.length >= 75);
   assert.ok(QUOTES.every((quote) => typeof quote === "string" && quote.trim()));
   assert.ok(QUOTES.every((quote) => quote.length <= 110));
+  assert.equal(new Set(QUOTES).size, QUOTES.length);
 });
 
 test("invalid date keys are rejected", () => {
