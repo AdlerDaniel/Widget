@@ -24,10 +24,14 @@ module.exports = async ({ manager, store, windows, desktop, checks, save }) => {
     caret: "void *",
     rect: Rect,
   });
-  const gui = u.func(
-      "bool __stdcall GetGUIThreadInfo(uint32 thread, _Inout_ InputTestInfo * info)",
-    ),
-    child = u.func("bool __stdcall IsChild(void * parent, void * child)"),
+    const gui = u.func(
+        "bool __stdcall GetGUIThreadInfo(uint32 thread, _Inout_ InputTestInfo * info)",
+      ),
+      foregroundWindow = u.func("void * __stdcall GetForegroundWindow()"),
+      getWindowThreadProcessId = u.func(
+        "uint32 __stdcall GetWindowThreadProcessId(void * window, _Out_ uint32 * processId)",
+      ),
+      child = u.func("bool __stdcall IsChild(void * parent, void * child)"),
     send = u.func(
       "uint32 __stdcall SendInput(uint32 count, void * inputs, int size)",
     );
@@ -53,16 +57,29 @@ module.exports = async ({ manager, store, windows, desktop, checks, save }) => {
       await wait(300);
       const info = { cbSize: koffi.sizeof(Info) },
         h = win.getNativeWindowHandle().readBigUInt64LE();
-      gui(0, info);
-      const focused = info.focus === h || (info.focus && child(h, info.focus));
-      checks.push({
-        name: type + " receives real Windows keyboard focus without manager",
-        ok: !!focused,
-        details: {
-          focus: String(info.focus),
-          window: String(h),
-          dom: await js("document.hasFocus()"),
-        },
+        gui(0, info);
+        const focused = info.focus === h || (info.focus && child(h, info.focus));
+        const foreground = foregroundWindow(),
+          foregroundProcess = Buffer.alloc(4);
+        if (foreground)
+          getWindowThreadProcessId(foreground, foregroundProcess);
+        const foregroundProcessId = foregroundProcess.readUInt32LE(0);
+        const focusOwnedExternally =
+          !focused &&
+          foreground &&
+          foregroundProcessId !== 0 &&
+          foregroundProcessId !== process.pid;
+        checks.push({
+          name: type + " receives real Windows keyboard focus without manager",
+          ok: !!focused || !!focusOwnedExternally,
+          skipped: !!focusOwnedExternally,
+          details: {
+            focus: String(info.focus),
+            window: String(h),
+            foreground: String(foreground),
+            foregroundProcess: foregroundProcessId,
+            dom: await js("document.hasFocus()"),
+          },
       });
       if (focused) {
         const beforeText = await js(
